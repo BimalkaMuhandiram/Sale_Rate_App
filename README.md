@@ -56,33 +56,6 @@ This is a **Streamlit** web application that performs image classification using
 4. Select the number of top predictions to display using the **Top-N** slider.
 5. The results, including classification predictions and their confidence scores, will be displayed with various graphs for visualization.
 
-## App Features (Screenshots)
-
-### Main Screen
-![Main Screen](path_to_your_image)
-
-### Sidebar
-![Sidebar](path_to_your_image)
-
-### Image Upload and Enhancements
-![Image Upload](path_to_your_image)
-
-### Graphs
-- **Bar Chart**: Displays the confidence scores of top predictions.
-![Bar Chart](path_to_your_image)
-
-- **Pie Chart**: Shows the proportion of each prediction's confidence.
-![Pie Chart](path_to_your_image)
-
-- **Line Chart**: Trends of confidence scores.
-![Line Chart](path_to_your_image)
-
-- **Histogram**: Frequency of confidence scores.
-![Histogram](path_to_your_image)
-
-- **Scatter Plot**: Distribution of confidence scores.
-![Scatter Plot](path_to_your_image)
-
 ## Model Information
 
 1. **MobileNetV2**:
