@@ -32,7 +32,7 @@ This is a **Streamlit** web application that performs image classification using
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/streamlit-image-classification-app.git
+    git clone https://github.com/BimalkaMuhandiram/Sale_Rate_App.git
     cd streamlit-image-classification-app
     ```
 
