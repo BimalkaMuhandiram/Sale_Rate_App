@@ -20,7 +20,6 @@ st.sidebar.title("Upload and Enhance your image")
 
 # Sidebar for model selection
 model_name = st.sidebar.selectbox("Select a pre-trained model", ("MobileNetV2", "VGG16"))
-
 model = load_model(model_name)
 
 # Sidebar to upload image
@@ -29,7 +28,7 @@ uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpe
 # Image enhancement options
 if uploaded_file is not None:
     # Display the uploaded image
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).convert('RGB')  # Ensure the image is in RGB format
     st.image(image, caption='Uploaded Image', use_column_width=True)
 
     # Image enhancement sliders
@@ -50,7 +49,7 @@ if uploaded_file is not None:
     st.write("Classifying...")
     with st.spinner("Processing..."):
         img = image.resize((224, 224))  # Resizing image to 224x224 for the models
-        img = np.array(img) / 255.0     # Normalize the image
+        img = np.array(img) / 255.0      # Normalize the image
         img = np.expand_dims(img, axis=0)
 
         # Model-specific preprocessing
@@ -62,58 +61,33 @@ if uploaded_file is not None:
         # Make a prediction
         preds = model.predict(img)
         
-        # Decoding predictions based on the selected model
+        # Sidebar to select number of top-N predictions
+        top_n = st.sidebar.slider("Select top N predictions to display", 1, 10, 5)
         if model_name == "VGG16":
-            decoded_preds = tf.keras.applications.vgg16.decode_predictions(preds, top=5)[0]
+            decoded_preds = tf.keras.applications.vgg16.decode_predictions(preds, top=top_n)[0]
         else:
-            decoded_preds = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=5)[0]
+            decoded_preds = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=top_n)[0]
 
         # Display the results
         st.write("Top predictions:")
         for i, (imagenet_id, label, score) in enumerate(decoded_preds):
             st.write(f"{i+1}. {label}: {score * 100:.2f}%")
 
-        # Progress Bar
-        st.progress(100)
-
-        # Bar chart of predictions
+        # Visualizations
         labels = [label for (_, label, _) in decoded_preds]
         scores = [score for (_, _, score) in decoded_preds]
 
+        # Bar chart of the top-N predictions
         fig, ax = plt.subplots()
         ax.barh(labels, scores, color='blue')
         ax.set_xlabel('Confidence Score')
-        ax.set_title('Top-5 Predictions (Bar Chart)')
+        ax.set_title(f'Top-{top_n} Predictions (Bar Chart)')
         st.pyplot(fig)
 
         # Pie chart for better visualization of scores
         fig, ax = plt.subplots()
         ax.pie(scores, labels=labels, autopct='%1.1f%%', startangle=90)
         ax.axis('equal')  # Equal aspect ratio ensures the pie is drawn as a circle.
-        st.pyplot(fig)
-
-        # Sidebar to select number of top-N predictions
-        top_n = st.sidebar.slider("Select top N predictions to display", 1, 10, 5)
-
-        # Decoding the top-N predictions
-        if model_name == "VGG16":
-            decoded_preds = tf.keras.applications.vgg16.decode_predictions(preds, top=top_n)[0]
-        else:
-            decoded_preds = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=top_n)[0]
-
-        # Display the top-N predictions in text
-        st.write(f"Top-{top_n} predictions:")
-        for i, (imagenet_id, label, score) in enumerate(decoded_preds):
-            st.write(f"{i+1}. {label}: {score * 100:.2f}%")
-
-        # Bar chart of the top-N predictions
-        labels = [label for (_, label, _) in decoded_preds]
-        scores = [score for (_, _, score) in decoded_preds]
-
-        fig, ax = plt.subplots()
-        ax.barh(labels, scores, color='green')
-        ax.set_xlabel('Confidence Score')
-        ax.set_title(f'Top-{top_n} Predictions (Bar Chart)')
         st.pyplot(fig)
 
         # Line Chart: Prediction scores vs. Labels
