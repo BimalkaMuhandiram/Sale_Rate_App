@@ -3,16 +3,18 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image, ImageEnhance
 import matplotlib.pyplot as plt
+import io
+import base64
 
 # Allow user to upload wallpaper image
-uploaded_file = st.sidebar.file_uploader("Upload a wallpaper image", type=["jpg", "jpeg", "png"])
+uploaded_wallpaper = st.sidebar.file_uploader("Upload a wallpaper image", type=["jpg", "jpeg", "png"])
 
 # Allow user to select a color theme
 color_theme = st.sidebar.selectbox("Select a color theme", ['Blues', 'Reds', 'Greens'])
 
 # Set background image if uploaded
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+if uploaded_wallpaper is not None:
+    image = Image.open(uploaded_wallpaper)
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -40,6 +42,7 @@ st.markdown(f"""
         background-size: cover;
         background-repeat: no-repeat;
         background-position: center;
+        color: black;  /* Default text color for better visibility */
     }}
     div.stButton > button:first-child {{
         background-color: {primary_color};
@@ -51,11 +54,10 @@ st.markdown(f"""
     }}
     header {{
         background-color: {primary_color};
+        color: white;
     }}
     </style>
     """, unsafe_allow_html=True)
-
-
 
 # Load the pre-trained model based on user selection
 @st.cache_resource
@@ -68,22 +70,6 @@ def load_model(model_name):
         model = tf.keras.applications.MobileNetV2(weights="imagenet")
     return model
 
-# Function to set the background image using CSS
-def set_background_image(image_url):
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url({image_url});
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
 st.title("Enhanced Image Classification App")
 st.sidebar.title("Upload and Enhance your image")
 
@@ -92,17 +78,13 @@ model_name = st.sidebar.selectbox("Select a pre-trained model", ("MobileNetV2", 
 model = load_model(model_name)
 
 # Sidebar to upload image
-uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.sidebar.file_uploader("Choose an image for classification...", type=["jpg", "jpeg", "png"])
 
 # Image enhancement options
 if uploaded_file is not None:
     # Display the uploaded image
     image = Image.open(uploaded_file).convert('RGB')  # Ensure the image is in RGB format
     st.image(image, caption='Uploaded Image', use_column_width=True)
-    
-    # Set the uploaded image as background
-    image_url = uploaded_file.name  # Using the file name for the background
-    set_background_image(image_url)
 
     # Image enhancement sliders
     st.sidebar.subheader("Image Enhancements")
@@ -133,7 +115,7 @@ if uploaded_file is not None:
 
         # Make a prediction
         preds = model.predict(img)
-        
+
         # Sidebar to select number of top-N predictions
         top_n = st.sidebar.slider("Select top N predictions to display", 1, 10, 5)
         if model_name == "VGG16":
