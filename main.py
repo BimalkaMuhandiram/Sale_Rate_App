@@ -10,9 +10,9 @@ warnings.filterwarnings("ignore")
 # Load the model
 model = joblib.load('random_forest_regressor_model.pkl')
 
-# Expected columns in the model
+# Expected columns for the model, excluding 'Sales' as it is the prediction target
 expected_columns = ['Order Date', 'Ship Date', 'Ship Mode', 'Segment', 'Country', 'City', 'State', 
-                    'Postal Code', 'Region', 'Category', 'Sub-Category', 'Sales']
+                    'Postal Code', 'Region', 'Category', 'Sub-Category']
 
 # Preprocessing function
 def preprocess_data(input_data):
@@ -31,7 +31,7 @@ def preprocess_data(input_data):
     return input_data
 
 # Streamlit app
-st.title("Sales Rate Prediction App")
+st.title("Sales Prediction App")
 
 st.header("Input Features")
 # Create input fields for each feature
@@ -51,7 +51,6 @@ product_id = st.text_input("Product ID")
 category = st.selectbox("Category", ["Furniture", "Office Supplies", "Technology"])
 sub_category = st.text_input("Sub-Category")
 product_name = st.text_input("Product Name")
-sales = st.number_input("Sales", min_value=0.0)
 
 # When the user clicks "Predict", preprocess and make a prediction
 if st.button("Predict"):
@@ -67,17 +66,16 @@ if st.button("Predict"):
         'Postal Code': [postal_code],
         'Region': [region],
         'Category': [category],
-        'Sub-Category': [sub_category],
-        'Sales': [sales]
+        'Sub-Category': [sub_category]
     })
 
     # Preprocess input data
     preprocessed_data = preprocess_data(input_data)
     
-    # Predict sales rate
+    # Predict sales
     try:
         prediction = model.predict(preprocessed_data)
         # Display the prediction result
-        st.write(f"Predicted Sales Rate: {prediction[0]}")
+        st.write(f"Predicted Sales: ${prediction[0]:,.2f}")
     except ValueError as e:
         st.error(f"An error occurred: {e}")
