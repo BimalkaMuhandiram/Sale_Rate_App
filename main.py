@@ -14,7 +14,7 @@ model = joblib.load('random_forest_regressor_model.pkl')
 expected_columns = ['Order Date', 'Ship Date', 'Ship Mode', 'Segment', 'Country', 'City', 'State', 
                     'Postal Code', 'Region', 'Category', 'Sub-Category']
 
-# Preprocessing function
+# Updated preprocessing function
 def preprocess_data(input_data):
     # Select only the columns that the model was trained on
     input_data = input_data[expected_columns]
@@ -25,9 +25,16 @@ def preprocess_data(input_data):
     for col in categorical_columns:
         if col in input_data.columns:
             input_data[col] = le.fit_transform(input_data[col])
-    
-    # Fill missing values if any
-    input_data.fillna(input_data.mean(), inplace=True)
+
+    # Handle missing values
+    # Fill numeric columns with 0 or the mean
+    numeric_cols = input_data.select_dtypes(include=['float64', 'int64']).columns
+    input_data[numeric_cols] = input_data[numeric_cols].fillna(0)
+
+    # Fill categorical columns with 'Unknown'
+    categorical_cols = input_data.select_dtypes(include=['object']).columns
+    input_data[categorical_cols] = input_data[categorical_cols].fillna("Unknown")
+
     return input_data
 
 # Streamlit app
