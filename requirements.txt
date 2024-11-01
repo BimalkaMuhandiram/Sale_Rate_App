@@ -21,7 +21,7 @@ google-auth==2.35.0
 google-auth-oauthlib==1.0.0
 google-pasta==0.2.0
 grpcio==1.66.2
-h5py==3.12.1
+h5py>=3.12.1,<4.0.0  # Allowing range
 idna==3.10
 importlib_metadata==8.5.0
 importlib_resources==6.4.5
@@ -34,20 +34,19 @@ libclang==18.1.1
 Markdown==3.7
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
-matplotlib==3.9.2
-mdurl==0.1.2
+matplotlib>=3.9.2,<4.0.0  # Allowing range
 ml-dtypes==0.4.1
 mpmath==1.3.0
 namex==0.0.8
 narwhals==1.9.0
 networkx==3.2.1
-numpy>=1.26.0
+numpy>=1.22.4  # Adjusted
 oauthlib==3.2.2
 opt_einsum==3.4.0
 optree==0.12.1
 package_name==0.1
 packaging==24.1
-pandas==2.2.3
+pandas>=2.2.3,<3.0.0  # Allowing range
 pillow==10.4.0
 protobuf==4.25.5
 pyarrow==17.0.0
