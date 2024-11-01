@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
 import warnings
 
 # Suppress warnings
@@ -11,42 +11,72 @@ warnings.filterwarnings("ignore")
 # Load the model
 model = joblib.load('random_forest_regressor_model.pkl')
 
-# Preprocessing functions
+# Preprocessing function
 def preprocess_data(input_data):
-    # Standardize column names
-    input_data.columns = input_data.columns.str.strip().str.lower().str.replace(' ', '_').str.replace(r'[^\\w\\s]', '')
-
-    # Encoding nominal and ordinal columns
-    ordinal_columns = ['ship_mode', 'segment', 'region']
-    nominal_columns = ['order_id', 'order_date', 'ship_date', 'customer_id', 'customer_name', 'city', 'state', 'product_id', 'sub-category', 'product_name']
-
+    # Encoding categorical columns
+    ordinal_columns = ['Ship Mode', 'Segment', 'Region']
     le = LabelEncoder()
     for col in ordinal_columns:
         if col in input_data.columns:
             input_data[col] = le.fit_transform(input_data[col])
-    
-    input_data = pd.get_dummies(input_data, columns=nominal_columns, drop_first=True)
 
-    # Fill missing values
+    # Fill missing values if any
     input_data.fillna(input_data.mean(), inplace=True)
-
     return input_data
 
 # Streamlit app
 st.title("Sales Rate Prediction App")
 
-# User inputs
 st.header("Input Features")
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
-if uploaded_file is not None:
-    user_data = pd.read_csv(uploaded_file)
-    preprocessed_data = preprocess_data(user_data)
-    
+# Create input fields for each feature
+row_id = st.number_input("Row ID", min_value=1, step=1)
+order_id = st.text_input("Order ID")
+order_date = st.date_input("Order Date")
+ship_date = st.date_input("Ship Date")
+ship_mode = st.selectbox("Ship Mode", ["First Class", "Second Class", "Standard Class", "Same Day"])
+customer_id = st.text_input("Customer ID")
+customer_name = st.text_input("Customer Name")
+segment = st.selectbox("Segment", ["Consumer", "Corporate", "Home Office"])
+country = st.text_input("Country", value="United States")  # Assuming "United States" as a default
+city = st.text_input("City")
+state = st.text_input("State")
+postal_code = st.number_input("Postal Code", min_value=0)
+region = st.selectbox("Region", ["East", "West", "Central", "South"])
+product_id = st.text_input("Product ID")
+category = st.selectbox("Category", ["Furniture", "Office Supplies", "Technology"])
+sub_category = st.text_input("Sub-Category")
+product_name = st.text_input("Product Name")
+sales = st.number_input("Sales", min_value=0.0)
+
+# When the user clicks "Predict", preprocess and make a prediction
+if st.button("Predict"):
+    # Create a DataFrame from user inputs
+    input_data = pd.DataFrame({
+        'Row ID': [row_id],
+        'Order ID': [order_id],
+        'Order Date': [order_date],
+        'Ship Date': [ship_date],
+        'Ship Mode': [ship_mode],
+        'Customer ID': [customer_id],
+        'Customer Name': [customer_name],
+        'Segment': [segment],
+        'Country': [country],
+        'City': [city],
+        'State': [state],
+        'Postal Code': [postal_code],
+        'Region': [region],
+        'Product ID': [product_id],
+        'Category': [category],
+        'Sub-Category': [sub_category],
+        'Product Name': [product_name],
+        'Sales': [sales]
+    })
+
+    # Preprocess input data
+    preprocessed_data = preprocess_data(input_data)
+
     # Predict sales rate
-    if st.button("Predict"):
-        predictions = model.predict(preprocessed_data)
-        user_data['Predicted Sales Rate'] = predictions
-        st.write("Prediction Results:")
-        st.write(user_data[['order_id', 'Predicted Sales Rate']])  # Customize as needed
-else:
-    st.write("Please upload a CSV file to make predictions.")
+    prediction = model.predict(preprocessed_data)
+    
+    # Display the prediction result
+    st.write(f"Predicted Sales Rate: {prediction[0]}")
