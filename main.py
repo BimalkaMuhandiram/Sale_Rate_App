@@ -80,7 +80,11 @@ if st.button("Predict"):
 
     # Preprocess input data
     preprocessed_data = preprocess_data(input_data)
-    
+
+    # Drop the sales column from the input features
+    if 'sales' in preprocessed_data.columns:
+        preprocessed_data = preprocessed_data.drop(columns=['sales'])
+
     # Make a prediction
     try:
         prediction = model.predict(preprocessed_data)
