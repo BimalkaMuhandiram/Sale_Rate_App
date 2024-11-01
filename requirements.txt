@@ -68,11 +68,11 @@ smmap==5.0.1
 streamlit==1.39.0
 sympy==1.13.1
 tenacity==9.0.0
-tensorboard==2.16.1  # Update to match TensorFlow version
+tensorboard==2.16.1
 tensorboard-data-server==0.7.2
-tensorflow==2.16.1  # Updated version
-tensorflow-estimator==2.16.0  # Updated to match TensorFlow version
-tensorflow-intel==2.16.1  # Updated to match TensorFlow version
+tensorflow==2.16.1
+tensorflow-estimator==2.16.1
+tensorflow-intel==2.16.1
 tensorflow-io-gcs-filesystem==0.31.0
 termcolor==2.4.0
 toml==0.10.2
