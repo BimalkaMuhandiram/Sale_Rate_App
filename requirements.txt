@@ -69,8 +69,7 @@ smmap==5.0.1
 streamlit==1.39.0
 sympy==1.13.1
 tenacity==9.0.0
-tensorboard==2.13.0
-tensorboard-data-server==0.7.2
+tensorboard>=2.18,<2.19  # Updated to be compatible with TensorFlow
 tensorflow==2.18.0  # Updated TensorFlow version
 tensorflow-estimator==2.13.0
 termcolor==2.4.0
