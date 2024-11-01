@@ -1,10 +1,22 @@
 import streamlit as st
+import pandas as pd
 import tensorflow as tf
 import numpy as np
 from PIL import Image, ImageEnhance
 import matplotlib.pyplot as plt
 import io
 import base64
+
+# Set the page layout
+st.set_page_config(layout="wide")
+st.title("Prediction Dashboard")
+
+# Sidebar header
+st.sidebar.header("Image and Prediction Dashboard")
+
+# Allow user to select a date
+selected_date = st.sidebar.date_input("Select a date", pd.to_datetime("today"))
+year = selected_date.year
 
 # Allow user to upload wallpaper image
 uploaded_wallpaper = st.sidebar.file_uploader("Upload a wallpaper image", type=["jpg", "jpeg", "png"])
@@ -70,14 +82,11 @@ def load_model(model_name):
         model = tf.keras.applications.MobileNetV2(weights="imagenet")
     return model
 
-st.title("Enhanced Image Classification App")
-st.sidebar.title("Upload and Enhance your image")
-
 # Sidebar for model selection
 model_name = st.sidebar.selectbox("Select a pre-trained model", ("MobileNetV2", "VGG16"))
 model = load_model(model_name)
 
-# Sidebar to upload image
+# Sidebar to upload image for classification
 uploaded_file = st.sidebar.file_uploader("Choose an image for classification...", type=["jpg", "jpeg", "png"])
 
 # Image enhancement options
@@ -170,3 +179,6 @@ if uploaded_file is not None:
         ax.set_title(f'Top-{top_n} Predictions (Scatter Plot)')
         plt.xticks(rotation=45)
         st.pyplot(fig)
+
+st.subheader(f'Loan Eligibility Prediction for the Year {year}')
+# Additional functionality for loan eligibility prediction can be added here
