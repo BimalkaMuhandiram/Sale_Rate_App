@@ -21,7 +21,7 @@ def preprocess_data(input_data):
     input_data['ship_date'] = pd.to_datetime(input_data['ship_date'])
 
     # Encode categorical columns
-    categorical_columns = ['ship_mode', 'segment', 'region', 'category', 'sub-category']
+    categorical_columns = ['ship_mode', 'segment', 'region', 'category', 'sub-category', 'customer_id', 'customer_name']
     le = LabelEncoder()
     
     for col in categorical_columns:
@@ -39,9 +39,13 @@ def preprocess_data(input_data):
 st.title("Sales Prediction App")
 
 # Input fields for features
+row_id = st.text_input("Row ID", value="1")  # Example default value
+order_id = st.text_input("Order ID")
 order_date = st.date_input("Order Date")
 ship_date = st.date_input("Ship Date")
 ship_mode = st.selectbox("Ship Mode", ["First Class", "Second Class", "Standard Class", "Same Day"])
+customer_id = st.text_input("Customer ID")
+customer_name = st.text_input("Customer Name")
 segment = st.selectbox("Segment", ["Consumer", "Corporate", "Home Office"])
 city = st.text_input("City")
 state = st.text_input("State")
@@ -56,9 +60,13 @@ product_name = st.text_input("Product Name")
 if st.button("Predict"):
     # Create a DataFrame from user inputs
     input_data = pd.DataFrame({
+        'row_id': [row_id],
+        'order_id': [order_id],
         'order_date': [order_date],
         'ship_date': [ship_date],
         'ship_mode': [ship_mode],
+        'customer_id': [customer_id],
+        'customer_name': [customer_name],
         'segment': [segment],
         'city': [city],
         'state': [state],
