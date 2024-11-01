@@ -15,6 +15,25 @@ def load_model(model_name):
         model = tf.keras.applications.MobileNetV2(weights="imagenet")
     return model
 
+# Set a custom CSS style for the Streamlit app
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #f0f8ff;
+        color: #333;
+    }
+    .uploaded-image {
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("Enhanced Image Classification App")
 st.sidebar.title("Upload and Enhance your image")
 
@@ -29,7 +48,8 @@ uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpe
 if uploaded_file is not None:
     # Display the uploaded image
     image = Image.open(uploaded_file).convert('RGB')  # Ensure the image is in RGB format
-    st.image(image, caption='Uploaded Image', use_column_width=True)
+    st.image(image, caption='Uploaded Image', use_column_width=True, output_format='auto', 
+              image_class="uploaded-image")
 
     # Image enhancement sliders
     st.sidebar.subheader("Image Enhancements")
@@ -43,7 +63,8 @@ if uploaded_file is not None:
     enhancer = ImageEnhance.Contrast(image)
     image = enhancer.enhance(contrast)
 
-    st.image(image, caption="Enhanced Image", use_column_width=True)
+    st.image(image, caption="Enhanced Image", use_column_width=True, output_format='auto',
+              image_class="uploaded-image")
 
     # Preprocess the image for model prediction
     st.write("Classifying...")
