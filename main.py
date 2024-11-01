@@ -11,16 +11,19 @@ warnings.filterwarnings("ignore")
 model = joblib.load('random_forest_regressor_model.pkl')
 
 # Expected columns for the model, excluding 'Sales' as it is the prediction target
-expected_columns = ['Order Date', 'Ship Date', 'Ship Mode', 'Segment', 'Country', 'City', 'State', 
-                    'Postal Code', 'Region', 'Category', 'Sub-Category']
+expected_columns = ['order date', 'ship date', 'ship mode', 'segment', 'country', 'city', 
+                    'state', 'postal code', 'region', 'category', 'sub-category']
 
 # Updated preprocessing function
 def preprocess_data(input_data):
+    # Normalize column names to lowercase
+    input_data.columns = input_data.columns.str.lower()
+
     # Select only the columns that the model was trained on
     input_data = input_data[expected_columns]
 
     # Encoding categorical columns
-    categorical_columns = ['Ship Mode', 'Segment', 'Region', 'Category', 'Sub-Category']
+    categorical_columns = ['ship mode', 'segment', 'region', 'category', 'sub-category']
     le = LabelEncoder()
     for col in categorical_columns:
         if col in input_data.columns:
@@ -63,17 +66,17 @@ product_name = st.text_input("Product Name")
 if st.button("Predict"):
     # Create a DataFrame from user inputs
     input_data = pd.DataFrame({
-        'Order Date': [order_date],
-        'Ship Date': [ship_date],
-        'Ship Mode': [ship_mode],
-        'Segment': [segment],
-        'Country': [country],
-        'City': [city],
-        'State': [state],
-        'Postal Code': [postal_code],
-        'Region': [region],
-        'Category': [category],
-        'Sub-Category': [sub_category]
+        'order date': [order_date],
+        'ship date': [ship_date],
+        'ship mode': [ship_mode],
+        'segment': [segment],
+        'country': [country],
+        'city': [city],
+        'state': [state],
+        'postal code': [postal_code],
+        'region': [region],
+        'category': [category],
+        'sub-category': [sub_category]
     })
 
     # Preprocess input data
