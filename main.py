@@ -10,6 +10,30 @@ warnings.filterwarnings("ignore")
 # Load the trained model
 model = joblib.load('random_forest_regressor_model.pkl')
 
+# Preprocessing function
+def preprocess_data(input_data):
+    # Normalize column names to lowercase
+    input_data.columns = input_data.columns.str.lower()
+
+    # Convert dates to datetime objects
+    input_data['order_date'] = pd.to_datetime(input_data['order_date'])
+    input_data['ship_date'] = pd.to_datetime(input_data['ship_date'])
+
+    # Encode categorical columns
+    categorical_columns = ['ship_mode', 'segment', 'region', 'category', 'sub-category', 'customer_id', 'customer_name']
+    le = LabelEncoder()
+    
+    for col in categorical_columns:
+        if col in input_data.columns:
+            input_data[col] = input_data[col].fillna("Unknown")  # Fill missing values
+            input_data[col] = le.fit_transform(input_data[col])  # Label encode categorical variables
+
+    # Handle missing numeric values
+    numeric_cols = input_data.select_dtypes(include=['float64', 'int64']).columns
+    input_data[numeric_cols] = input_data[numeric_cols].fillna(0)  # Fill numeric missing values with 0
+
+    return input_data
+
 # Streamlit app
 st.title("Sales Prediction App")
 
