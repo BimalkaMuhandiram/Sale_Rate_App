@@ -81,9 +81,16 @@ if st.button("Predict"):
     # Preprocess input data
     preprocessed_data = preprocess_data(input_data)
 
-    # Drop the sales column from the input features
-    if 'sales' in preprocessed_data.columns:
-        preprocessed_data = preprocessed_data.drop(columns=['sales'])
+    # Make sure to only use the features that the model was trained on
+    # Define the expected columns for the model (without 'sales')
+    expected_columns = ['row_id', 'order_id', 'order_date', 'ship_date', 
+                        'ship_mode', 'customer_id', 'customer_name', 
+                        'segment', 'city', 'state', 'postal_code', 
+                        'region', 'category', 'sub-category', 
+                        'product_id', 'product_name']
+
+    # Filter the DataFrame to include only the expected columns
+    preprocessed_data = preprocessed_data[expected_columns]
 
     # Make a prediction
     try:
