@@ -1,61 +1,61 @@
 import streamlit as st
-import pandas as pd  # Import Pandas
-import joblib
+from components.docs import agixt_docs
+from ApiClient import get_agixt
 
-# Load the trained model
-model = joblib.load('random_forest_regressor_model.pkl')
+# Check if session.txt exists
+try:
+    with open("./session.txt") as f:
+        agent_name = f.read()
+except:
+    agent_name = ""
 
-# Streamlit app
-st.title("Sales Prediction App")
+st.set_page_config(
+    page_title="AGiXT",
+    page_icon=":robot:",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+ApiClient = get_agixt()
+if not ApiClient:
+    st.stop()
+agixt_docs()
 
-# Input fields for features
-row_id = st.text_input("Row ID", value="1")
-order_id = st.text_input("Order ID")
-order_date = st.date_input("Order Date")
-ship_date = st.date_input("Ship Date")
-ship_mode = st.selectbox("Ship Mode", ["First Class", "Second Class", "Standard Class", "Same Day"])
-customer_id = st.text_input("Customer ID")
-customer_name = st.text_input("Customer Name")
-segment = st.selectbox("Segment", ["Consumer", "Corporate", "Home Office"])
-city = st.text_input("City")
-state = st.text_input("State")
-postal_code = st.number_input("Postal Code", min_value=0)
-region = st.selectbox("Region", ["East", "West", "Central", "South"])
-category = st.selectbox("Category", ["Furniture", "Office Supplies", "Technology"])
-sub_category = st.text_input("Sub-Category")
-product_id = st.text_input("Product ID")
-product_name = st.text_input("Product Name")
+if agent_name == "":
+    st.markdown("# Getting Started")
+    st.markdown(
+        "If you do not intend to use the OpenAI agent at this time, go to the [Agent Management](Agent_Management) page and create a new agent for your chosen provider, or modify the default OpenAI agent there."
+    )
+    st.markdown("## OpenAI Agent Quick Start")
+    st.markdown(
+        "**If you would like to use an OpenAI agent, please enter your API key below.**"
+    )
 
-# When the user clicks "Predict", create a DataFrame and make a prediction
-if st.button("Predict"):
-    # Create a dictionary from user inputs
-    input_data = {
-        'row_id': row_id,
-        'order_id': order_id,
-        'order_date': order_date,
-        'ship_date': ship_date,
-        'ship_mode': ship_mode,
-        'customer_id': customer_id,
-        'customer_name': customer_name,
-        'segment': segment,
-        'city': city,
-        'state': state,
-        'postal_code': postal_code,
-        'region': region,
-        'category': category,
-        'sub-category': sub_category,
-        'product_id': product_id,
-        'product_name': product_name
-    }
-
-    # Convert input_data to DataFrame
-    input_df = pd.DataFrame([input_data])
-
-    # Make a prediction
+    openai_api_key = st.text_input("OpenAI API Key", key="openai_api_key")
+    if st.button("Update API Key"):
+        agent_config = ApiClient.get_agentconfig(agent_name="OpenAI")
+        agent_settings = agent_config["settings"]
+        agent_settings["OPENAI_API_KEY"] = openai_api_key
+        ApiClient.update_agent_settings(
+            agent_name="OpenAI",
+            settings=agent_settings,
+        )
+        with open("./session.txt", "w") as f:
+            f.write("OpenAI")
+        st.rerun()
+else:
     try:
-        prediction = model.predict(input_df)
-        st.write(f"Predicted Sales: ${prediction[0]:,.2f}")
-    except ValueError as e:
-        st.error(f"An error occurred: {e}")
-    except Exception as ex:
-        st.error(f"An unexpected error occurred: {ex}")
+        with open("./.streamlit/config.toml") as f:
+            if "dark" in f.read():
+                logo = "AGiXT-gradient-light.svg"
+            else:
+                logo = "AGiXT-gradient-flat.svg"
+    except:
+        logo = "AGiXT-gradient-light.svg"
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+        <img src="https://josh-xt.github.io/AGiXT/images/{logo}" width="65%">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
