@@ -4,6 +4,12 @@ import numpy as np
 from PIL import Image, ImageEnhance
 import matplotlib.pyplot as plt
 
+# Allow user to upload wallpaper image
+uploaded_file = st.sidebar.file_uploader("Upload a wallpaper image", type=["jpg", "jpeg", "png"])
+
+# Allow user to select a color theme
+color_theme = st.sidebar.selectbox("Select a color theme", ['Blues', 'Reds', 'Greens'])
+
 # Load the pre-trained model based on user selection
 @st.cache_resource
 def load_model(model_name):
