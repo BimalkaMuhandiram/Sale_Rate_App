@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd  # Import Pandas
 import joblib
 
 # Load the trained model
@@ -27,7 +28,7 @@ product_name = st.text_input("Product Name")
 
 # When the user clicks "Predict", create a DataFrame and make a prediction
 if st.button("Predict"):
-    # Create a DataFrame from user inputs
+    # Create a dictionary from user inputs
     input_data = {
         'row_id': row_id,
         'order_id': order_id,
