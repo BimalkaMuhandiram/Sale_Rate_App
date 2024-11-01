@@ -10,6 +10,53 @@ uploaded_file = st.sidebar.file_uploader("Upload a wallpaper image", type=["jpg"
 # Allow user to select a color theme
 color_theme = st.sidebar.selectbox("Select a color theme", ['Blues', 'Reds', 'Greens'])
 
+# Set background image if uploaded
+if uploaded_file is not None:
+    image = Image.open(uploaded_file)
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    background_image = f'url(data:image/png;base64,{img_str})'
+else:
+    background_image = ''
+
+# Apply selected color theme to the app's main color scheme using CSS
+if color_theme == 'Blues':
+    primary_color = "#1f77b4"
+    secondary_color = "#aec7e8"
+elif color_theme == 'Reds':
+    primary_color = "#d62728"
+    secondary_color = "#ff9896"
+elif color_theme == 'Greens':
+    primary_color = "#2ca02c"
+    secondary_color = "#98df8a"
+
+# Inject custom CSS for dynamic color themes and background image
+st.markdown(f"""
+    <style>
+    .main {{
+        background-color: {secondary_color};
+        background-image: {background_image};
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+    }}
+    div.stButton > button:first-child {{
+        background-color: {primary_color};
+        color: white;
+    }}
+    div.stButton > button:hover {{
+        background-color: #00ff00;
+        color: red;
+    }}
+    header {{
+        background-color: {primary_color};
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+
+
 # Load the pre-trained model based on user selection
 @st.cache_resource
 def load_model(model_name):
