@@ -1,117 +1,52 @@
 import streamlit as st
-import tensorflow as tf
+import pandas as pd
 import numpy as np
-from PIL import Image, ImageEnhance
-import matplotlib.pyplot as plt
+import joblib
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+import warnings
 
-# Load the pre-trained model based on user selection
-@st.cache_resource
-def load_model(model_name):
-    if model_name == "MobileNetV2":
-        model = tf.keras.applications.MobileNetV2(weights="imagenet")
-    elif model_name == "VGG16":
-        model = tf.keras.applications.VGG16(weights="imagenet")
-    else:
-        model = tf.keras.applications.MobileNetV2(weights="imagenet")
-    return model
+# Suppress warnings
+warnings.filterwarnings("ignore")
 
-st.title("Enhanced Image Classification App")
-st.sidebar.title("Upload and Enhance your image")
+# Load the model
+model = joblib.load('random_forest_regressor_model.pkl')
 
-# Sidebar for model selection
-model_name = st.sidebar.selectbox("Select a pre-trained model", ("MobileNetV2", "VGG16"))
-model = load_model(model_name)
+# Preprocessing functions
+def preprocess_data(input_data):
+    # Standardize column names
+    input_data.columns = input_data.columns.str.strip().str.lower().str.replace(' ', '_').str.replace(r'[^\\w\\s]', '')
 
-# Sidebar to upload image
-uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    # Encoding nominal and ordinal columns
+    ordinal_columns = ['ship_mode', 'segment', 'region']
+    nominal_columns = ['order_id', 'order_date', 'ship_date', 'customer_id', 'customer_name', 'city', 'state', 'product_id', 'sub-category', 'product_name']
 
-# Image enhancement options
+    le = LabelEncoder()
+    for col in ordinal_columns:
+        if col in input_data.columns:
+            input_data[col] = le.fit_transform(input_data[col])
+    
+    input_data = pd.get_dummies(input_data, columns=nominal_columns, drop_first=True)
+
+    # Fill missing values
+    input_data.fillna(input_data.mean(), inplace=True)
+
+    return input_data
+
+# Streamlit app
+st.title("Sales Rate Prediction App")
+
+# User inputs
+st.header("Input Features")
+uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 if uploaded_file is not None:
-    # Display the uploaded image
-    image = Image.open(uploaded_file).convert('RGB')  # Ensure the image is in RGB format
-    st.image(image, caption='Uploaded Image', use_column_width=True)
-
-    # Image enhancement sliders
-    st.sidebar.subheader("Image Enhancements")
-    brightness = st.sidebar.slider("Brightness", 0.5, 2.0, 1.0)
-    contrast = st.sidebar.slider("Contrast", 0.5, 2.0, 1.0)
-
-    # Apply enhancements
-    enhancer = ImageEnhance.Brightness(image)
-    image = enhancer.enhance(brightness)
-
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(contrast)
-
-    st.image(image, caption="Enhanced Image", use_column_width=True)
-
-    # Preprocess the image for model prediction
-    st.write("Classifying...")
-    with st.spinner("Processing..."):
-        img = image.resize((224, 224))  # Resizing image to 224x224 for the models
-        img = np.array(img) / 255.0      # Normalize the image
-        img = np.expand_dims(img, axis=0)
-
-        # Model-specific preprocessing
-        if model_name == "VGG16":
-            img = tf.keras.applications.vgg16.preprocess_input(img)
-        else:
-            img = tf.keras.applications.mobilenet_v2.preprocess_input(img)
-
-        # Make a prediction
-        preds = model.predict(img)
-        
-        # Sidebar to select number of top-N predictions
-        top_n = st.sidebar.slider("Select top N predictions to display", 1, 10, 5)
-        if model_name == "VGG16":
-            decoded_preds = tf.keras.applications.vgg16.decode_predictions(preds, top=top_n)[0]
-        else:
-            decoded_preds = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=top_n)[0]
-
-        # Display the results
-        st.write("Top predictions:")
-        for i, (imagenet_id, label, score) in enumerate(decoded_preds):
-            st.write(f"{i+1}. {label}: {score * 100:.2f}%")
-
-        # Visualizations
-        labels = [label for (_, label, _) in decoded_preds]
-        scores = [score for (_, _, score) in decoded_preds]
-
-        # Bar chart of the top-N predictions
-        fig, ax = plt.subplots()
-        ax.barh(labels, scores, color='blue')
-        ax.set_xlabel('Confidence Score')
-        ax.set_title(f'Top-{top_n} Predictions (Bar Chart)')
-        st.pyplot(fig)
-
-        # Pie chart for better visualization of scores
-        fig, ax = plt.subplots()
-        ax.pie(scores, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')  # Equal aspect ratio ensures the pie is drawn as a circle.
-        st.pyplot(fig)
-
-        # Line Chart: Prediction scores vs. Labels
-        fig, ax = plt.subplots()
-        ax.plot(labels, scores, marker='o', linestyle='-', color='orange')
-        ax.set_xlabel('Labels')
-        ax.set_ylabel('Confidence Scores')
-        ax.set_title(f'Top-{top_n} Predictions (Line Chart)')
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-        # Histogram of confidence scores
-        fig, ax = plt.subplots()
-        ax.hist(scores, bins=5, color='purple', alpha=0.7)
-        ax.set_xlabel('Confidence Score')
-        ax.set_ylabel('Frequency')
-        ax.set_title(f'Top-{top_n} Predictions (Histogram)')
-        st.pyplot(fig)
-
-        # Scatter Plot: Confidence distribution
-        fig, ax = plt.subplots()
-        ax.scatter(labels, scores, color='red', s=100)
-        ax.set_xlabel('Labels')
-        ax.set_ylabel('Confidence Scores')
-        ax.set_title(f'Top-{top_n} Predictions (Scatter Plot)')
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+    user_data = pd.read_csv(uploaded_file)
+    preprocessed_data = preprocess_data(user_data)
+    
+    # Predict sales rate
+    if st.button("Predict"):
+        predictions = model.predict(preprocessed_data)
+        user_data['Predicted Sales Rate'] = predictions
+        st.write("Prediction Results:")
+        st.write(user_data[['order_id', 'Predicted Sales Rate']])  # Customize as needed
+else:
+    st.write("Please upload a CSV file to make predictions.")
