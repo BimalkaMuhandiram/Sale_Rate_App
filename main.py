@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 # Function to extract features from the image
 def extract_features(image):
@@ -90,21 +91,23 @@ if uploaded_file is not None:
             axes[i].axis('off')
         st.pyplot(fig)
 
-        ### Visualization 4: Pairplot of RGB Intensities (Sampling Pixels)
+        ### Visualization 4: Pairplot of RGB Channel Intensities (Sampling Pixels)
         st.subheader("Pairplot of RGB Channel Intensities")
+        # Reshape the image array to a 2D array of RGB values
         img_sample = img_array.reshape(-1, 3)  # Flatten image pixels into RGB values
-        img_sample_df = sns.load_dataset('iris').iloc[:len(img_sample), :3].copy()
-        img_sample_df.columns = ['Red', 'Green', 'Blue']
-        img_sample_df['Red'], img_sample_df['Green'], img_sample_df['Blue'] = img_sample[:, 0], img_sample[:, 1], img_sample[:, 2]
-        
+
+        # Create DataFrame with sampled pixels
+        if len(img_sample) > 500:  # Limit to 500 points for visualization clarity
+            img_sample_df = pd.DataFrame(img_sample[np.random.choice(len(img_sample), 500, replace=False)], columns=['Red', 'Green', 'Blue'])
+        else:
+            img_sample_df = pd.DataFrame(img_sample, columns=['Red', 'Green', 'Blue'])
+
         fig = sns.pairplot(img_sample_df, plot_kws={'alpha': 0.2})
         st.pyplot(fig)
 
         ### Visualization 5: Correlation Heatmap of Features
         st.subheader("Correlation Heatmap of Features")
-        feature_df = sns.load_dataset('iris').iloc[:1, :len(feature_values)].copy()
-        feature_df.iloc[0] = feature_values
-        feature_df.columns = labels
+        feature_df = pd.DataFrame([feature_values], columns=labels)
         corr_matrix = feature_df.corr()
         
         fig, ax = plt.subplots()
