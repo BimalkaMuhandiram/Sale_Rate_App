@@ -79,12 +79,13 @@ if uploaded_file is not None:
         ax.legend()
         st.pyplot(fig)
 
-        ### Visualization 3: Heatmap of RGB Channel Intensities
+        ### Visualization 3: Heatmap of RGB Channels
         st.subheader("Heatmap of RGB Channels")
         img_array = np.array(image)
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-        for i, color in enumerate(colors):
-            sns.heatmap(img_array[:, :, i], ax=axes[i], cmap=color, cbar=False)
+        colormaps = ['Reds', 'Greens', 'Blues']
+        for i, (color, cmap) in enumerate(zip(colors, colormaps)):
+            sns.heatmap(img_array[:, :, i], ax=axes[i], cmap=cmap, cbar=False)
             axes[i].set_title(f'{color.capitalize()} Channel Intensity')
             axes[i].axis('off')
         st.pyplot(fig)
