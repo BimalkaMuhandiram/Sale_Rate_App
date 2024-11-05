@@ -31,3 +31,24 @@ You can install these packages using pip:
 
 ```bash
 pip install streamlit numpy Pillow matplotlib seaborn pandas
+
+## Running the Application
+
+Clone this repository to your local machine.
+
+Navigate to the directory where the application file is located.
+
+Run the Streamlit app using the command:
+
+streamlit run app.py
+
+Replace app.py with the name of your Python file if it's different.
+
+Open the URL provided in the terminal (usually http://localhost:8501) to access the app in your web browser.
+
+## How to Use
+
+Upload an image using the sidebar file uploader.
+The app will process the image and extract features, displaying them visually.
+You can view various visualizations such as bar charts, histograms, heatmaps, and pairplots.
+Download the extracted features in CSV format for further analysis.
