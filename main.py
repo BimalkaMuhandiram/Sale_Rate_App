@@ -1,92 +1,143 @@
 import streamlit as st
-import pandas as pd
+import tensorflow as tf
 import numpy as np
-import joblib
+from PIL import Image, ImageEnhance
 import matplotlib.pyplot as plt
-import seaborn as sns
-from PIL import Image
 
-# Load the pre-trained model
+# Load the pre-trained model based on user selection
 @st.cache_resource
-def load_model():
-    return joblib.load("random_forest_regressor_model.pkl")
+def load_model(model_name):
+    if model_name == "MobileNetV2":
+        model = tf.keras.applications.MobileNetV2(weights="imagenet")
+    elif model_name == "VGG16":
+        model = tf.keras.applications.VGG16(weights="imagenet")
+    else:
+        model = tf.keras.applications.MobileNetV2(weights="imagenet")
+    return model
 
-model = load_model()
+st.title("Enhanced Image Classification App")
+st.sidebar.title("Upload and Enhance your image")
 
-# App Title
-st.title("Sales Prediction App")
+# Sidebar for model selection
+model_name = st.sidebar.selectbox("Select a pre-trained model", ("MobileNetV2", "VGG16"))
 
-# Sidebar for user inputs
-st.sidebar.header("User Input Features")
+model = load_model(model_name)
 
-def user_input_features():
-    order_date = st.sidebar.date_input("Order Date:", pd.to_datetime("today"))
-    ship_date = st.sidebar.date_input("Ship Date:", pd.to_datetime("today"))
-    ship_mode = st.sidebar.selectbox("Ship Mode:", ["Standard", "Express", "Same-day"])  # Example modes
-    customer_id = st.sidebar.text_input("Customer ID:")
-    segment = st.sidebar.selectbox("Segment:", ["Consumer", "Corporate", "Home Office"])  # Example segments
-    category = st.sidebar.selectbox("Product Category", ["Furniture", "Office Supplies", "Technology"])  # Example categories
-    feature1 = st.sidebar.slider("Feature 1 (e.g., Order Quantity)", 0, 100, 50)  # Adjust range as needed
-    feature2 = st.sidebar.slider("Feature 2 (e.g., Discount %)", 0, 100, 10)  # Adjust range as needed
-    
-    data = {
-        'Order Date': order_date,
-        'Ship Date': ship_date,
-        'Ship Mode': ship_mode,
-        'Customer ID': customer_id,
-        'Segment': segment,
-        'Category': category,
-        'Feature 1': feature1,
-        'Feature 2': feature2
-    }
-    features = pd.DataFrame(data, index=[0])
-    return features
+# Sidebar to upload image
+uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-input_data = user_input_features()
+# Image enhancement options
+if uploaded_file is not None:
+    # Display the uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
 
-# Prediction Section
-st.subheader("Sales Prediction")
-if st.button("Predict"):
-    with st.spinner("Making prediction..."):
-        prediction = model.predict(input_data[['Feature 1', 'Feature 2']])  # Use the relevant features for prediction
-        st.success(f"Predicted Sales: ${prediction[0]:,.2f}")
+    # Image enhancement sliders
+    st.sidebar.subheader("Image Enhancements")
+    brightness = st.sidebar.slider("Brightness", 0.5, 2.0, 1.0)
+    contrast = st.sidebar.slider("Contrast", 0.5, 2.0, 1.0)
 
-# Media Upload Section
-st.header("Upload Your Media")
-uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"], label_visibility='collapsed')
-uploaded_csv = st.file_uploader("Upload your CSV file...", type=["csv"], label_visibility='collapsed')
+    # Apply enhancements
+    enhancer = ImageEnhance.Brightness(image)
+    image = enhancer.enhance(brightness)
 
-# Handle uploaded image
-if uploaded_image is not None:
-    try:
-        image = Image.open(uploaded_image)  # Open the uploaded image
-        st.image(image, caption='Uploaded Image', use_column_width=True)
-    except Exception as e:
-        st.error(f"Error opening image: {e}")  # Show error if image cannot be opened
+    enhancer = ImageEnhance.Contrast(image)
+    image = enhancer.enhance(contrast)
 
-# Handle uploaded CSV
-if uploaded_csv is not None:
-    try:
-        data = pd.read_csv(uploaded_csv)  # Read the uploaded CSV file
-        st.write("Data from CSV:")
-        st.dataframe(data)  # Display the dataframe in the app
+    st.image(image, caption="Enhanced Image", use_column_width=True)
 
-        # Display histogram if 'Sales' column is present
-        if 'Sales' in data.columns:
-            st.subheader("Sales Distribution")
-            plt.figure(figsize=(10, 5))
-            sns.histplot(data['Sales'], bins=30, kde=True)  # Adjust 'Sales' as needed
-            st.pyplot(plt)
+    # Preprocess the image for model prediction
+    st.write("Classifying...")
+    with st.spinner("Processing..."):
+        img = image.resize((224, 224))  # Resizing image to 224x224 for the models
+        img = np.array(img) / 255.0     # Normalize the image
+        img = np.expand_dims(img, axis=0)
+
+        # Model-specific preprocessing
+        if model_name == "VGG16":
+            img = tf.keras.applications.vgg16.preprocess_input(img)
         else:
-            st.warning("Column 'Sales' not found in the uploaded CSV.")
-            
-        # Display scatter plot if required columns are present
-        if 'Feature1' in data.columns and 'Feature2' in data.columns:
-            st.subheader("Feature 1 vs Feature 2 Scatter Plot")
-            plt.figure(figsize=(10, 5))
-            sns.scatterplot(data=data, x='Feature1', y='Feature2', hue='Category', style='Category', s=100)  # Adjust column names
-            st.pyplot(plt)
+            img = tf.keras.applications.mobilenet_v2.preprocess_input(img)
+
+        # Make a prediction
+        preds = model.predict(img)
+        
+        # Decoding predictions based on the selected model
+        if model_name == "VGG16":
+            decoded_preds = tf.keras.applications.vgg16.decode_predictions(preds, top=5)[0]
         else:
-            st.warning("Required columns for scatter plot not found in the uploaded CSV.")
-    except Exception as e:
-        st.error(f"Error loading CSV: {e}")  # Show error if CSV cannot be read
+            decoded_preds = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=5)[0]
+
+        # Display the results
+        st.write("Top predictions:")
+        for i, (imagenet_id, label, score) in enumerate(decoded_preds):
+            st.write(f"{i+1}. {label}: {score * 100:.2f}%")
+
+        # Progress Bar
+        st.progress(100)
+
+        # Bar chart of predictions
+        labels = [label for (_, label, _) in decoded_preds]
+        scores = [score for (_, _, score) in decoded_preds]
+
+        fig, ax = plt.subplots()
+        ax.barh(labels, scores, color='blue')
+        ax.set_xlabel('Confidence Score')
+        ax.set_title('Top-5 Predictions (Bar Chart)')
+        st.pyplot(fig)
+
+        # Pie chart for better visualization of scores
+        fig, ax = plt.subplots()
+        ax.pie(scores, labels=labels, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')  # Equal aspect ratio ensures the pie is drawn as a circle.
+        st.pyplot(fig)
+
+        # Sidebar to select number of top-N predictions
+        top_n = st.sidebar.slider("Select top N predictions to display", 1, 10, 5)
+
+        # Decoding the top-N predictions
+        if model_name == "VGG16":
+            decoded_preds = tf.keras.applications.vgg16.decode_predictions(preds, top=top_n)[0]
+        else:
+            decoded_preds = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=top_n)[0]
+
+        # Display the top-N predictions in text
+        st.write(f"Top-{top_n} predictions:")
+        for i, (imagenet_id, label, score) in enumerate(decoded_preds):
+            st.write(f"{i+1}. {label}: {score * 100:.2f}%")
+
+        # Bar chart of the top-N predictions
+        labels = [label for (_, label, _) in decoded_preds]
+        scores = [score for (_, _, score) in decoded_preds]
+
+        fig, ax = plt.subplots()
+        ax.barh(labels, scores, color='green')
+        ax.set_xlabel('Confidence Score')
+        ax.set_title(f'Top-{top_n} Predictions (Bar Chart)')
+        st.pyplot(fig)
+
+        # Line Chart: Prediction scores vs. Labels
+        fig, ax = plt.subplots()
+        ax.plot(labels, scores, marker='o', linestyle='-', color='orange')
+        ax.set_xlabel('Labels')
+        ax.set_ylabel('Confidence Scores')
+        ax.set_title(f'Top-{top_n} Predictions (Line Chart)')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
+
+        # Histogram of confidence scores
+        fig, ax = plt.subplots()
+        ax.hist(scores, bins=5, color='purple', alpha=0.7)
+        ax.set_xlabel('Confidence Score')
+        ax.set_ylabel('Frequency')
+        ax.set_title(f'Top-{top_n} Predictions (Histogram)')
+        st.pyplot(fig)
+
+        # Scatter Plot: Confidence distribution
+        fig, ax = plt.subplots()
+        ax.scatter(labels, scores, color='red', s=100)
+        ax.set_xlabel('Labels')
+        ax.set_ylabel('Confidence Scores')
+        ax.set_title(f'Top-{top_n} Predictions (Scatter Plot)')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
