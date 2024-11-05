@@ -5,6 +5,9 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px 
@@ -65,18 +68,31 @@ def model_page():
 
     # Preprocessing the Data
     st.subheader("Preprocessing the Data")
+    
+    # Features and target variable
     X = data.drop('Sales', axis=1, errors='ignore')  # Features
     y = data['Sales']  # Target
 
+    # Identify categorical columns
+    categorical_cols = X.select_dtypes(include=['object']).columns.tolist()
+    
     # Display feature and target summaries
     with st.expander("Feature Summary"):
-        st.write(X.describe())
-        
+        st.write(X.describe(include='all'))
+
     with st.expander("Target Summary"):
         st.write(y.describe())
 
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_state)
+
+    # Define preprocessing for numerical and categorical features
+    numeric_features = X_train.select_dtypes(exclude=['object']).columns.tolist()
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', 'passthrough', numeric_features),  # Keep numeric features unchanged
+            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_cols)  # One-hot encode categorical features
+        ])
 
     # Train the model
     st.subheader("Training the Model")
@@ -85,7 +101,11 @@ def model_page():
     if train_button:
         with st.spinner('Training in progress...'):
             try:
-                model = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=random_state)
+                # Create a pipeline that first transforms the data and then fits the model
+                model = Pipeline(steps=[('preprocessor', preprocessor),
+                                         ('regressor', RandomForestRegressor(n_estimators=n_estimators, 
+                                                                             max_depth=max_depth, 
+                                                                             random_state=random_state))])
                 model.fit(X_train, y_train)
 
                 # Predict on the test set
