@@ -50,6 +50,7 @@ package_name==0.1
 packaging==24.1
 pandas==2.2.3
 pillow==10.4.0
+plotly==5.15.0  # Added Plotly for visualization
 protobuf==4.25.5
 pyarrow==17.0.0
 pyasn1==0.6.1
