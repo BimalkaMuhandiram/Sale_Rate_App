@@ -58,22 +58,29 @@ if uploaded_csv is not None:
         st.write("Data from CSV:")
         st.dataframe(data)  # Display the dataframe in the app
 
-        # Example of displaying a histogram based on the CSV data
-        if 'Sales' in data.columns:  # Adjust this according to your CSV
+        # Check if 'Sales' column exists and create a histogram
+        if 'Sales' in data.columns:
             st.subheader("Sales Distribution")
             plt.figure(figsize=(10, 5))
-            sns.histplot(data['Sales'], bins=30, kde=True)  # Adjust 'Sales' as needed
+            sns.histplot(data['Sales'], bins=30, kde=True)
             st.pyplot(plt)
-        else:
-            st.warning("Column 'Sales' not found in the uploaded CSV.")
-            
-        # Example of displaying a scatter plot
-        if 'Feature1' in data.columns and 'Feature2' in data.columns:  # Adjust as needed
+
+        # Check if required columns for scatter plot exist
+        if 'Feature1' in data.columns and 'Feature2' in data.columns:
             st.subheader("Feature 1 vs Feature 2 Scatter Plot")
             plt.figure(figsize=(10, 5))
-            sns.scatterplot(data=data, x='Feature1', y='Feature2', hue='Category', style='Category', s=100)  # Adjust column names
+            sns.scatterplot(data=data, x='Feature1', y='Feature2', hue='Category', style='Category', s=100)
             st.pyplot(plt)
         else:
             st.warning("Required columns for scatter plot not found in the uploaded CSV.")
+        
+        # Additional Analysis: Correlation Heatmap
+        if set(['Feature1', 'Feature2', 'Sales']).issubset(data.columns):
+            st.subheader("Correlation Heatmap")
+            plt.figure(figsize=(10, 5))
+            correlation = data[['Feature1', 'Feature2', 'Sales']].corr()
+            sns.heatmap(correlation, annot=True, cmap='coolwarm')
+            st.pyplot(plt)
+
     except Exception as e:
         st.error(f"Error loading CSV: {e}")  # Show error if CSV cannot be read
