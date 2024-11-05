@@ -20,20 +20,23 @@ st.title("Sales Prediction App")
 st.sidebar.header("User Input Features")
 
 def user_input_features():
-    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50)  # Adjust range as needed
-    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50)  # Adjust range as needed
+    feature1 = st.sidebar.slider("Feature 1 (e.g., Order Quantity)", 0, 100, 50)  # Adjust range as needed
+    feature2 = st.sidebar.slider("Feature 2 (e.g., Discount %)", 0, 100, 10)  # Adjust range as needed
+    category = st.sidebar.selectbox("Product Category", ["Furniture", "Office Supplies", "Technology"])  # Example categories
     data = {'Feature 1': feature1,
-            'Feature 2': feature2}
+            'Feature 2': feature2,
+            'Category': category}
     features = pd.DataFrame(data, index=[0])
     return features
 
 input_data = user_input_features()
 
-# Progress bar for prediction
+# Prediction Section
+st.subheader("Prediction")
 if st.button("Predict"):
     with st.spinner("Making prediction..."):
         prediction = model.predict(input_data)
-        st.success(f"Prediction: {prediction[0]:.2f}")
+        st.success(f"Predicted Sales: ${prediction[0]:,.2f}")
 
 # Media Upload Section
 st.header("Upload Your Media")
@@ -45,7 +48,7 @@ if uploaded_image is not None:
         image = Image.open(uploaded_image)  # Open the uploaded image
         st.image(image, caption='Uploaded Image', use_column_width=True)
     except Exception as e:
-        st.error(f"Error: {e}")  # Show error if image cannot be opened
+        st.error(f"Error opening image: {e}")  # Show error if image cannot be opened
 
 if uploaded_csv is not None:
     try:
@@ -53,12 +56,22 @@ if uploaded_csv is not None:
         st.write("Data from CSV:")
         st.dataframe(data)  # Display the dataframe in the app
 
-        # Example of displaying a graph based on the CSV data
-        if 'YourColumn' in data.columns:  # Adjust this according to your CSV
+        # Example of displaying a histogram based on the CSV data
+        if 'Sales' in data.columns:  # Adjust this according to your CSV
+            st.subheader("Sales Distribution")
             plt.figure(figsize=(10, 5))
-            sns.histplot(data['YourColumn'], bins=30)  # Adjust 'YourColumn' as needed
+            sns.histplot(data['Sales'], bins=30, kde=True)  # Adjust 'Sales' as needed
             st.pyplot(plt)
         else:
-            st.warning("Column 'YourColumn' not found in the uploaded CSV.")
+            st.warning("Column 'Sales' not found in the uploaded CSV.")
+            
+        # Example of displaying a scatter plot
+        if 'Feature1' in data.columns and 'Feature2' in data.columns:  # Adjust as needed
+            st.subheader("Feature 1 vs Feature 2 Scatter Plot")
+            plt.figure(figsize=(10, 5))
+            sns.scatterplot(data=data, x='Feature1', y='Feature2', hue='Category', style='Category', s=100)  # Adjust column names
+            st.pyplot(plt)
+        else:
+            st.warning("Required columns for scatter plot not found in the uploaded CSV.")
     except Exception as e:
         st.error(f"Error loading CSV: {e}")  # Show error if CSV cannot be read
