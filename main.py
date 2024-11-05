@@ -50,7 +50,7 @@ def getDateFeatures(df, date):
 
 # ----- Loading the key components
 # Loading the base dataframe
-rpath = "path/to/your/dataset.csv"  # Update this to your dataset path
+rpath = "train.csv"  # Update this to your dataset path
 train_data = load_data(rpath)
 
 # Loading the toolkit
