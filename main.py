@@ -32,7 +32,7 @@ def user_input_features():
 input_data = user_input_features()
 
 # Prediction Section
-st.subheader("Prediction")
+st.subheader("Sales Prediction")
 if st.button("Predict"):
     with st.spinner("Making prediction..."):
         prediction = model.predict(input_data)
@@ -43,6 +43,7 @@ st.header("Upload Your Media")
 uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"], label_visibility='collapsed')
 uploaded_csv = st.file_uploader("Upload your CSV file...", type=["csv"], label_visibility='collapsed')
 
+# Handle uploaded image
 if uploaded_image is not None:
     try:
         image = Image.open(uploaded_image)  # Open the uploaded image
@@ -50,6 +51,7 @@ if uploaded_image is not None:
     except Exception as e:
         st.error(f"Error opening image: {e}")  # Show error if image cannot be opened
 
+# Handle uploaded CSV
 if uploaded_csv is not None:
     try:
         data = pd.read_csv(uploaded_csv)  # Read the uploaded CSV file
