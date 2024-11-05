@@ -13,7 +13,7 @@ from datetime import datetime
 # Function to load the dataset
 @st.cache_data
 def load_data():
-    data = pd.read_csv("train.csv")  # Replace with the path to your dataset
+    data = pd.read_csv("train.csv") 
     return data
 
 # Load data
