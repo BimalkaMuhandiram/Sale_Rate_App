@@ -4,6 +4,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
+from PIL import Image  # Import the Image class from PIL
 
 # Load the pre-trained model
 @st.cache_resource
@@ -18,8 +19,8 @@ st.title("Sales Prediction App")
 # Sidebar for user inputs
 st.sidebar.header("User Input Features")
 def user_input_features():
-    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50)  # Adjust range as needed
-    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50)  # Adjust range as needed
+    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50)
+    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50) 
     data = {'Feature 1': feature1,
             'Feature 2': feature2}
     features = pd.DataFrame(data, index=[0])
@@ -35,23 +36,27 @@ if st.button("Predict"):
 
 # Media Upload Section
 st.header("Upload Your Media")
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"], label_visibility='collapsed')
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption='Uploaded Image', use_column_width=True)
+    try:
+        image = Image.open(uploaded_file)  # Open the uploaded image
+        st.image(image, caption='Uploaded Image', use_column_width=True)
+    except Exception as e:
+        st.error(f"Error: {e}")  # Show error if image cannot be opened
 
 # Data visualization section
 st.header("Data Visualization")
-data = pd.read_csv('your_dataset.csv')  # Adjust with actual dataset path
-st.write(data.head())
-
-# Example of displaying a graph
-plt.figure(figsize=(10, 5))
-sns.histplot(data['YourColumn'], bins=30)
-st.pyplot(plt)
-
-# Additional features and graphs as necessary
+try:
+    data = pd.read_csv('your_dataset.csv')  # Adjust with actual dataset path
+    st.write(data.head())
+    
+    # Example of displaying a graph
+    plt.figure(figsize=(10, 5))
+    sns.histplot(data['YourColumn'], bins=30)  # Adjust 'YourColumn' as needed
+    st.pyplot(plt)
+except FileNotFoundError:
+    st.error("Dataset file not found. Please ensure the correct file path.")
 
 # Footer
 st.write("Created by [Your Name]")
