@@ -52,7 +52,7 @@ def getDateFeatures(df, date):
 
 # ----- Loading the key components
 # Loading the base dataframe
-rpath = "/Users/emmanythedon/Documents/train.csv"
+rpath = "train.csv"
 train_data = load_data(rpath)
 
 # Loading the toolkit
