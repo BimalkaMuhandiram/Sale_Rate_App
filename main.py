@@ -10,7 +10,7 @@ import time
 @st.cache_resource
 def load_model():
     # Make sure to have your model saved as 'model.pkl' in the same directory
-    return joblib.load("model.pkl")
+    return joblib.load("random_forest_regressor_model.pkl")
 
 model = load_model()
 
