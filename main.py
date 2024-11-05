@@ -1,19 +1,11 @@
 import streamlit as st
 import numpy as np
 from PIL import Image, ImageEnhance
-import joblib
 import matplotlib.pyplot as plt
-
-# Load the pre-trained model based on user selection
-@st.cache_resource
-def load_model(model_name):
-    if model_name == "RandomForestRegressor":
-        model = joblib.load("random_forest_regressor_model.pkl")
-    return model
 
 # Function to extract features from the image
 def extract_features(image):
-    """Extracts features from the image for prediction."""
+    """Extracts features from the image for visualization."""
     img_array = np.array(image) / 255.0  # Normalize the image
     features = []
 
@@ -35,16 +27,11 @@ def extract_features(image):
     features.extend(hist_green[:4])  # First 4 bins from Green
     features.extend(hist_blue[:4])  # First 4 bins from Blue
 
-    return np.array(features).reshape(1, -1)
+    return np.array(features)
 
 # Streamlit App Layout
-st.title("Enhanced Image Classification App")
+st.title("Enhanced Image Feature Extraction and Visualization App")
 st.sidebar.title("Upload and Enhance your image")
-
-# Sidebar for model selection
-model_name = st.sidebar.selectbox("Select a pre-trained model", ("RandomForestRegressor",))
-
-model = load_model(model_name)
 
 # Sidebar to upload image
 uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -69,45 +56,36 @@ if uploaded_file is not None:
 
     st.image(image, caption="Enhanced Image", use_column_width=True)
 
-    # Preprocess the image for model prediction
-    st.write("Classifying...")
+    # Preprocess the image for feature extraction
+    st.write("Extracting features...")
     with st.spinner("Processing..."):
         features = extract_features(image)  # Extract features from the enhanced image
 
-        # Debug: Print the shape of the input
-        st.write(f"Input shape for prediction: {features.shape}")
+        # Debug: Print the feature values
+        st.write(f"Extracted Features: {features}")
 
-        # Make prediction with Random Forest
-        try:
-            prediction = model.predict(features)
-            st.write(f"Predicted value: {prediction[0]:.2f}")  # Display the prediction
-            
-            # Visualization: Bar Chart for Features
-            labels = ['Mean Red', 'Mean Green', 'Mean Blue',
-                      'Std Red', 'Std Green', 'Std Blue'] + \
-                     [f'Hist Red {i+1}' for i in range(4)] + \
-                     [f'Hist Green {i+1}' for i in range(4)] + \
-                     [f'Hist Blue {i+1}' for i in range(4)]
-            feature_values = features.flatten()
+        # Visualization: Bar Chart for Features
+        labels = ['Mean Red', 'Mean Green', 'Mean Blue',
+                  'Std Red', 'Std Green', 'Std Blue'] + \
+                 [f'Hist Red {i+1}' for i in range(4)] + \
+                 [f'Hist Green {i+1}' for i in range(4)] + \
+                 [f'Hist Blue {i+1}' for i in range(4)]
+        feature_values = features.flatten()
 
-            # Bar chart for feature values
-            fig, ax = plt.subplots()
-            ax.barh(labels, feature_values, color='skyblue')
-            ax.set_xlabel('Feature Value')
-            ax.set_title('Extracted Features from Image')
-            st.pyplot(fig)
+        # Bar chart for feature values
+        fig, ax = plt.subplots()
+        ax.barh(labels, feature_values, color='skyblue')
+        ax.set_xlabel('Feature Value')
+        ax.set_title('Extracted Features from Image')
+        st.pyplot(fig)
 
-            # Histogram of RGB channel values
-            fig, ax = plt.subplots()
-            colors = ['red', 'green', 'blue']
-            for i, color in enumerate(colors):
-                ax.hist(np.array(image)[:, :, i].flatten(), bins=32, color=color, alpha=0.5, label=f'{color.capitalize()} Channel')
-            ax.set_title('RGB Histogram')
-            ax.set_xlabel('Pixel Intensity')
-            ax.set_ylabel('Frequency')
-            ax.legend()
-            st.pyplot(fig)
-
-        except ValueError as e:
-            st.error(f"Prediction error: {e}")
-            st.write("Ensure that the input shape matches the model's expected shape.")
+        # Histogram of RGB channel values
+        fig, ax = plt.subplots()
+        colors = ['red', 'green', 'blue']
+        for i, color in enumerate(colors):
+            ax.hist(np.array(image)[:, :, i].flatten(), bins=32, color=color, alpha=0.5, label=f'{color.capitalize()} Channel')
+        ax.set_title('RGB Histogram')
+        ax.set_xlabel('Pixel Intensity')
+        ax.set_ylabel('Frequency')
+        ax.legend()
+        st.pyplot(fig)
