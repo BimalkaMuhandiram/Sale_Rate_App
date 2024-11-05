@@ -1,117 +1,125 @@
 import streamlit as st
-import tensorflow as tf
+import pandas as pd
 import numpy as np
-from PIL import Image, ImageEnhance
+import joblib
 import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 
-# Load the pre-trained model based on user selection
+# Load and cache the model
 @st.cache_resource
-def load_model(model_name):
-    if model_name == "MobileNetV2":
-        model = tf.keras.applications.MobileNetV2(weights="imagenet")
-    elif model_name == "VGG16":
-        model = tf.keras.applications.VGG16(weights="imagenet")
-    else:
-        model = tf.keras.applications.MobileNetV2(weights="imagenet")
-    return model
+def load_model():
+    return joblib.load('random_forest_regressor_model.pkl')
 
-st.title("Enhanced Image Classification App")
-st.sidebar.title("Upload and Enhance your image")
+# Load data
+@st.cache_data
+def load_data():
+    data = pd.read_csv('/content/train.csv')
+    return data
 
-# Sidebar for model selection
-model_name = st.sidebar.selectbox("Select a pre-trained model", ("MobileNetV2", "VGG16"))
-model = load_model(model_name)
+# Define a function for model prediction and evaluation
+def evaluate_model(X_train, X_test, y_train, y_test):
+    model = load_model()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    return y_pred
 
-# Sidebar to upload image
-uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-# Image enhancement options
-if uploaded_file is not None:
-    # Display the uploaded image
-    image = Image.open(uploaded_file).convert('RGB')  # Ensure the image is in RGB format
-    st.image(image, caption='Uploaded Image', use_column_width=True)
-
-    # Image enhancement sliders
-    st.sidebar.subheader("Image Enhancements")
-    brightness = st.sidebar.slider("Brightness", 0.5, 2.0, 1.0)
-    contrast = st.sidebar.slider("Contrast", 0.5, 2.0, 1.0)
-
-    # Apply enhancements
-    enhancer = ImageEnhance.Brightness(image)
-    image = enhancer.enhance(brightness)
-
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(contrast)
-
-    st.image(image, caption="Enhanced Image", use_column_width=True)
-
-    # Preprocess the image for model prediction
-    st.write("Classifying...")
-    with st.spinner("Processing..."):
-        img = image.resize((224, 224))  # Resizing image to 224x224 for the models
-        img = np.array(img) / 255.0      # Normalize the image
-        img = np.expand_dims(img, axis=0)
-
-        # Model-specific preprocessing
-        if model_name == "VGG16":
-            img = tf.keras.applications.vgg16.preprocess_input(img)
-        else:
-            img = tf.keras.applications.mobilenet_v2.preprocess_input(img)
-
-        # Make a prediction
-        preds = model.predict(img)
+# Main function to run the app
+def main():
+    st.title("Sales Prediction App")
+    
+    # Sidebar for user options
+    st.sidebar.header("App Configuration")
+    if st.sidebar.checkbox("Show raw data"):
+        data = load_data()
+        st.subheader("Raw Data")
+        st.write(data.head())
         
-        # Sidebar to select number of top-N predictions
-        top_n = st.sidebar.slider("Select top N predictions to display", 1, 10, 5)
-        if model_name == "VGG16":
-            decoded_preds = tf.keras.applications.vgg16.decode_predictions(preds, top=top_n)[0]
-        else:
-            decoded_preds = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=top_n)[0]
+    # Data loading and preprocessing
+    data = load_data()
+    data['Postal Code'].fillna(data['Postal Code'].mean(), inplace=True)
+    
+    # Splitting data
+    features = data.drop(columns=['Sales', 'Country'])  # Drop unnecessary columns
+    target = data['Sales']
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
 
-        # Display the results
-        st.write("Top predictions:")
-        for i, (imagenet_id, label, score) in enumerate(decoded_preds):
-            st.write(f"{i+1}. {label}: {score * 100:.2f}%")
+    # Display training progress
+    with st.spinner("Training the model..."):
+        y_pred = evaluate_model(X_train, X_test, y_train, y_test)
+        st.success("Model training complete!")
 
-        # Visualizations
-        labels = [label for (_, label, _) in decoded_preds]
-        scores = [score for (_, _, score) in decoded_preds]
+    # Display performance metrics
+    st.header("Model Evaluation Metrics")
+    mae = mean_absolute_error(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_test, y_pred)
+    
+    st.write(f"**Mean Absolute Error (MAE):** {mae:.2f}")
+    st.write(f"**Mean Squared Error (MSE):** {mse:.2f}")
+    st.write(f"**Root Mean Squared Error (RMSE):** {rmse:.2f}")
+    st.write(f"**R-squared (R²):** {r2:.2f}")
 
-        # Bar chart of the top-N predictions
-        fig, ax = plt.subplots()
-        ax.barh(labels, scores, color='blue')
-        ax.set_xlabel('Confidence Score')
-        ax.set_title(f'Top-{top_n} Predictions (Bar Chart)')
-        st.pyplot(fig)
+    # Visualizations in container
+    st.header("Data Visualization")
+    with st.container():
+        st.subheader("Correlation Matrix")
+        corr_matrix = data.corr()
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+        st.pyplot(plt)
 
-        # Pie chart for better visualization of scores
-        fig, ax = plt.subplots()
-        ax.pie(scores, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')  # Equal aspect ratio ensures the pie is drawn as a circle.
-        st.pyplot(fig)
+        st.subheader("Feature Importances")
+        model = load_model()
+        model.fit(X_train, y_train)
+        importances = model.feature_importances_
+        feature_names = X_train.columns
+        sorted_indices = np.argsort(importances)[::-1]
+        
+        plt.figure(figsize=(10, 6))
+        plt.bar(range(len(importances)), importances[sorted_indices], align='center')
+        plt.xticks(range(len(importances)), feature_names[sorted_indices], rotation=90)
+        plt.title("Feature Importance")
+        st.pyplot(plt)
 
-        # Line Chart: Prediction scores vs. Labels
-        fig, ax = plt.subplots()
-        ax.plot(labels, scores, marker='o', linestyle='-', color='orange')
-        ax.set_xlabel('Labels')
-        ax.set_ylabel('Confidence Scores')
-        ax.set_title(f'Top-{top_n} Predictions (Line Chart)')
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+    # User input for prediction
+    st.sidebar.header("Predict Sales")
+    st.sidebar.write("Enter input values for prediction:")
+    row_id = st.sidebar.number_input("Row ID", min_value=0, step=1)
+    order_id = st.sidebar.text_input("Order ID", "CA-2017-152156")
+    order_date = st.sidebar.date_input("Order Date")
+    ship_date = st.sidebar.date_input("Ship Date")
+    ship_mode = st.sidebar.selectbox("Ship Mode", data['Ship Mode'].unique())
+    customer_id = st.sidebar.text_input("Customer ID", "CG-12520")
+    customer_name = st.sidebar.text_input("Customer Name", "Claire Gute")
+    segment = st.sidebar.selectbox("Segment", data['Segment'].unique())
+    city = st.sidebar.text_input("City", "Henderson")
+    state = st.sidebar.text_input("State", "Kentucky")
+    postal_code = st.sidebar.number_input("Postal Code", value=42420)
+    region = st.sidebar.selectbox("Region", data['Region'].unique())
+    product_id = st.sidebar.text_input("Product ID", "FUR-BO-10001798")
+    category = st.sidebar.selectbox("Category", data['Category'].unique())
+    sub_category = st.sidebar.selectbox("Sub-Category", data['Sub-Category'].unique())
+    product_name = st.sidebar.text_input("Product Name", "Bush Somerset Collection Bookcase")
 
-        # Histogram of confidence scores
-        fig, ax = plt.subplots()
-        ax.hist(scores, bins=5, color='purple', alpha=0.7)
-        ax.set_xlabel('Confidence Score')
-        ax.set_ylabel('Frequency')
-        ax.set_title(f'Top-{top_n} Predictions (Histogram)')
-        st.pyplot(fig)
+    # Organize input into DataFrame for prediction
+    user_data = pd.DataFrame({
+        'Row ID': [row_id], 'Order ID': [order_id], 'Order Date': [order_date],
+        'Ship Date': [ship_date], 'Ship Mode': [ship_mode], 'Customer ID': [customer_id],
+        'Customer Name': [customer_name], 'Segment': [segment], 'City': [city], 'State': [state],
+        'Postal Code': [postal_code], 'Region': [region], 'Product ID': [product_id],
+        'Category': [category], 'Sub-Category': [sub_category], 'Product Name': [product_name]
+    })
 
-        # Scatter Plot: Confidence distribution
-        fig, ax = plt.subplots()
-        ax.scatter(labels, scores, color='red', s=100)
-        ax.set_xlabel('Labels')
-        ax.set_ylabel('Confidence Scores')
-        ax.set_title(f'Top-{top_n} Predictions (Scatter Plot)')
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+    if st.sidebar.button("Predict Sales"):
+        # Transform user data if necessary (e.g., encoding)
+        st.write("User input data:", user_data)
+        prediction = model.predict(user_data)
+        st.write(f"**Predicted Sales:** ${prediction[0]:.2f}")
+
+# Run the app
+if __name__ == "__main__":
+    main()
