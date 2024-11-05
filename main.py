@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image, ImageEnhance
 import joblib
+import matplotlib.pyplot as plt
 
 # Load the pre-trained model based on user selection
 @st.cache_resource
@@ -24,19 +25,15 @@ def extract_features(image):
     std_rgb = img_array.std(axis=(0, 1))  # Std for R, G, B
     features.extend(std_rgb)  # 3 features
 
-    # Extract a subset of histogram features to meet the 17 feature requirement
+    # Extract histogram features
     hist_red, _ = np.histogram(img_array[:, :, 0], bins=8, range=(0, 1))
     hist_green, _ = np.histogram(img_array[:, :, 1], bins=8, range=(0, 1))
     hist_blue, _ = np.histogram(img_array[:, :, 2], bins=8, range=(0, 1))
 
-    # Limit to only 8 histogram features from RGB (4 from each channel)
+    # Use the first 4 histogram bins from each channel
     features.extend(hist_red[:4])  # First 4 bins from Red
     features.extend(hist_green[:4])  # First 4 bins from Green
     features.extend(hist_blue[:4])  # First 4 bins from Blue
-
-    # Ensure we only keep 17 features
-    if len(features) > 17:
-        features = features[:17]  # Truncate to the first 17 features
 
     return np.array(features).reshape(1, -1)
 
@@ -84,6 +81,33 @@ if uploaded_file is not None:
         try:
             prediction = model.predict(features)
             st.write(f"Predicted value: {prediction[0]:.2f}")  # Display the prediction
+            
+            # Visualization: Bar Chart for Features
+            labels = ['Mean Red', 'Mean Green', 'Mean Blue',
+                      'Std Red', 'Std Green', 'Std Blue'] + \
+                     [f'Hist Red {i+1}' for i in range(4)] + \
+                     [f'Hist Green {i+1}' for i in range(4)] + \
+                     [f'Hist Blue {i+1}' for i in range(4)]
+            feature_values = features.flatten()
+
+            # Bar chart for feature values
+            fig, ax = plt.subplots()
+            ax.barh(labels, feature_values, color='skyblue')
+            ax.set_xlabel('Feature Value')
+            ax.set_title('Extracted Features from Image')
+            st.pyplot(fig)
+
+            # Histogram of RGB channel values
+            fig, ax = plt.subplots()
+            colors = ['red', 'green', 'blue']
+            for i, color in enumerate(colors):
+                ax.hist(np.array(image)[:, :, i].flatten(), bins=32, color=color, alpha=0.5, label=f'{color.capitalize()} Channel')
+            ax.set_title('RGB Histogram')
+            ax.set_xlabel('Pixel Intensity')
+            ax.set_ylabel('Frequency')
+            ax.legend()
+            st.pyplot(fig)
+
         except ValueError as e:
             st.error(f"Prediction error: {e}")
             st.write("Ensure that the input shape matches the model's expected shape.")
