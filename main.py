@@ -1,105 +1,144 @@
+import joblib
 import streamlit as st
 import pandas as pd
-import joblib
-from sklearn.preprocessing import OneHotEncoder
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px 
 from datetime import datetime
-from PIL import Image
 
-# Load the pre-trained model
-@st.cache_resource
-def load_model():
-    return joblib.load("random_forest_regressor_model.pkl")
+# Function to load the dataset
+@st.cache_data
+def load_data():
+    data = pd.read_csv("train.csv")  # Replace with the path to your dataset
+    return data
 
-model = load_model()
+# Load data
+data = load_data()
 
-# App Title
-st.title("Sales Prediction App")
+# Define the home page
+def home_page():
+    st.title("Sales Prediction App")
+    
+    # Upload media (example images)
+    st.image("sales_image.jpg")  # Replace with your image path
+    st.video("sales_video.mp4")  # Replace with your video path
+    
+    st.write("""
+    Welcome to the Sales Prediction App! Here, you can predict sales based on input features from your dataset.
+    Use the sidebar to navigate through the different pages and to train the model or make predictions.
+    """)
 
-# Sidebar for user inputs
-st.sidebar.header("User Input Features")
+    # Display basic data overview
+    st.subheader('Dataset Overview')
+    st.write(data.head())
+    st.write("Summary of dataset:")
+    st.write(data.describe())
 
-def user_input_features():
-    # Collecting user input based on relevant features in the dataset
-    order_quantity = st.sidebar.slider("Order Quantity", 1, 100, 10)  # Assume this is a numerical feature
-    discount = st.sidebar.slider("Discount (%)", 0, 100, 10)  # Discount percentage
-    customer_id = st.sidebar.text_input("Customer ID", "CUST_001")  # Example input for customer ID
-    customer_name = st.sidebar.text_input("Customer Name", "John Doe")  # Example input for customer name
-    category = st.sidebar.selectbox("Product Category", ["Furniture", "Office Supplies", "Technology"])  # Example categorical feature
-    city = st.sidebar.text_input("City", "New York")  # Example input for city
-    order_date = st.sidebar.date_input("Order Date", value=datetime.today())  # Default to today
+    # Visualizing sales distribution
+    st.subheader('Sales Distribution')
+    fig, ax = plt.subplots()
+    sns.histplot(data['Sales'], kde=True, bins=20, ax=ax)
+    ax.set_title('Sales Distribution')
+    ax.set_xlabel('Sales')
+    st.pyplot(fig)
 
-    # Create a DataFrame with user inputs
-    data = {
-        'order_quantity': order_quantity,
-        'discount': discount,
-        'customer_id': customer_id,
-        'customer_name': customer_name,
-        'category': category,
-        'city': city,
-        'order_date': order_date
-    }
-    features = pd.DataFrame(data, index=[0])
+    # Gender Distribution (if applicable, based on dataset)
+    if 'Segment' in data.columns:
+        segment_counts = data['Segment'].value_counts().reset_index()
+        segment_counts.columns = ['Segment', 'Count']
+        fig = px.pie(segment_counts, values='Count', names='Segment', title='Customer Segment Distribution')
+        st.plotly_chart(fig)
 
-    return features
+# Define the model training page
+def model_page():
+    st.title("Sales Prediction Model")
+    
+    # Sidebar for user inputs
+    st.sidebar.header("Model Hyperparameters")
 
-input_data = user_input_features()
+    # Input widgets for model parameters
+    n_estimators = st.sidebar.slider("Number of Estimators", 10, 200, 100, help="The number of trees in the forest.")
+    max_depth = st.sidebar.slider("Maximum Depth", 1, 20, 10, help="The maximum depth of the trees.")
+    random_state = st.sidebar.number_input("Random State", value=42, help="Random seed for reproducibility.")
 
-# Progress bar for prediction
-if st.button("Predict"):
-    with st.spinner("Making prediction..."):
-        try:
-            # Prepare the input features for prediction
-            categorical_features = ['customer_id', 'customer_name', 'category', 'city']
-            numerical_features = ['order_quantity', 'discount']
+    # Preprocessing
+    st.subheader("Preprocessing the Data")
+    X = data.drop('Sales', axis=1)  # Features
+    y = data['Sales']  # Target
 
-            # One-Hot Encoding for categorical features
-            encoder = OneHotEncoder(handle_unknown='ignore')
-            encoded_categorical = encoder.fit_transform(input_data[categorical_features]).toarray()
-            encoded_df = pd.DataFrame(encoded_categorical, columns=encoder.get_feature_names_out(categorical_features))
-            
-            # Combine encoded categorical features with numerical features
-            final_input = pd.concat([input_data[numerical_features], encoded_df], axis=1)
+    # Display feature and target summaries
+    with st.expander("Feature Summary"):
+        st.write(X.describe())
 
-            # Make prediction
-            prediction = model.predict(final_input)
-            st.success(f"Predicted Sales: ${prediction[0]:.2f}")
-        except ValueError as e:
-            st.error(f"Prediction Error: {str(e)}")  # Show error if prediction fails
+    with st.expander("Target Summary"):
+        st.write(y.describe())
 
-# Media Upload Section
-st.header("Upload Your Media")
-uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-uploaded_csv = st.file_uploader("Upload your CSV file...", type=["csv"])
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_state)
 
-if uploaded_image is not None:
-    try:
-        image = Image.open(uploaded_image)  # Open the uploaded image
-        st.image(image, caption='Uploaded Image', use_column_width=True)
-    except Exception as e:
-        st.error(f"Error: {e}")  # Show error if image cannot be opened
+    # Train the model
+    st.subheader("Training the Model")
+    train_button = st.button("Train Model")
 
-if uploaded_csv is not None:
-    try:
-        data = pd.read_csv(uploaded_csv)  # Read the uploaded CSV file
-        st.write("Data from CSV:")
-        st.dataframe(data)  # Display the dataframe in the app
+    if train_button:
+        with st.spinner('Training in progress...'):
+            model = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=random_state)
+            model.fit(X_train, y_train)
 
-        # Display basic statistics about the data
-        st.write("Basic Statistics:")
-        st.write(data.describe())
+            # Predict on the test set
+            y_pred = model.predict(X_test)
+            mse = mean_squared_error(y_test, y_pred)
+            rmse = np.sqrt(mse)
 
-        # Example: Display sales by category
-        st.subheader("Sales by Category")
-        sales_by_category = data.groupby('category')['sales'].sum().reset_index()
-        st.bar_chart(sales_by_category.set_index('category'))
+            st.success(f"Model Trained! RMSE: *{rmse:.2f}*")
 
-        # Example: Display sales over time
-        st.subheader("Sales Over Time")
-        data['order_date'] = pd.to_datetime(data['order_date'])  # Ensure the date column is in datetime format
-        sales_over_time = data.groupby(data['order_date'].dt.to_period('M'))['sales'].sum().reset_index()
-        sales_over_time['order_date'] = sales_over_time['order_date'].dt.to_timestamp()  # Convert back to timestamp for plotting
-        st.line_chart(sales_over_time.set_index('order_date')['sales'])
+            # Visualize predictions vs actual values
+            st.subheader("Predictions vs Actual")
+            comparison_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
+            st.line_chart(comparison_df)
 
-    except Exception as e:
-        st.error(f"Error loading CSV: {e}")  # Show error if CSV cannot be read
+# Define the prediction page
+def prediction_page():
+    st.title("Sales Prediction")
+
+    loaded_model = joblib.load(open('sales_model.joblib', 'rb'))  # Load your trained model
+
+    def sales_prediction(input_data):
+        input_data_as_numpy_array = np.asarray(input_data)
+        input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
+        prediction = loaded_model.predict(input_data_reshaped)
+        return f"Predicted Sales: ${prediction[0]:.2f}"
+
+    def main():
+        st.markdown("### Enter your details")
+        # User inputs based on your dataset
+        order_quantity = st.text_input('Order Quantity')
+        discount = st.text_input('Discount (%)')
+        category = st.selectbox('Product Category', ['Furniture', 'Office Supplies', 'Technology'])  # Add more categories as needed
+        city = st.text_input('City')
+        customer_id = st.text_input('Customer ID')
+        customer_name = st.text_input('Customer Name')
+        order_date = st.date_input("Order Date", value=datetime.today())
+
+        if st.button('Click to Predict Sales'):
+            with st.spinner('Calculating...'):
+                prediction = sales_prediction([order_quantity, discount, category, city, customer_id, customer_name])
+                st.success(prediction)
+
+    main()
+
+# Sidebar Navigation
+st.sidebar.title("Navigation")
+page_selection = st.sidebar.radio("Go to", ["Home", "Sales Prediction Model", "Prediction"])
+
+# Sidebar - Link to the different pages
+if page_selection == "Home":
+    home_page()
+elif page_selection == "Sales Prediction Model":
+    model_page()
+elif page_selection == "Prediction":
+    prediction_page()
