@@ -9,7 +9,7 @@ from PIL import Image
 # Load the pre-trained model
 @st.cache_resource
 def load_model():
-    return joblib.load("model.pkl")
+    return joblib.load("random_forest_regressor_model.pkl")
 
 model = load_model()
 
