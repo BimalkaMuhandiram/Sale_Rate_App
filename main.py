@@ -8,88 +8,82 @@ import joblib
 def load_model(model_name):
     if model_name == "RandomForestRegressor":
         model = joblib.load("random_forest_regressor_model.pkl")
-        return model
-    else:
-        st.error("Unsupported model type selected.")
-        return None
+    return model
 
-# Image enhancement function
-def enhance_image(image, brightness, contrast):
-    """Enhances the image based on brightness and contrast values."""
-    enhancer = ImageEnhance.Brightness(image)
-    image = enhancer.enhance(brightness)
-    
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(contrast)
-    
-    return image
-
-# Feature extraction function
+# Function to extract features from the image
 def extract_features(image):
     """Extracts features from the image for prediction."""
     img_array = np.array(image) / 255.0  # Normalize the image
     features = []
 
-    # Mean and Standard deviation of RGB channels
-    mean_rgb = img_array.mean(axis=(0, 1))
-    std_rgb = img_array.std(axis=(0, 1))
-    features.extend(mean_rgb)
-    features.extend(std_rgb)
+    # Mean of RGB channels
+    mean_rgb = img_array.mean(axis=(0, 1))  # Mean for R, G, B
+    features.extend(mean_rgb)  # 3 features
 
-    # Histogram of RGB channels
+    # Standard deviation of RGB channels
+    std_rgb = img_array.std(axis=(0, 1))  # Std for R, G, B
+    features.extend(std_rgb)  # 3 features
+
+    # Extract a subset of histogram features to meet the 17 feature requirement
     hist_red, _ = np.histogram(img_array[:, :, 0], bins=8, range=(0, 1))
     hist_green, _ = np.histogram(img_array[:, :, 1], bins=8, range=(0, 1))
     hist_blue, _ = np.histogram(img_array[:, :, 2], bins=8, range=(0, 1))
-    features.extend(hist_red)
-    features.extend(hist_green)
-    features.extend(hist_blue)
+
+    # Limit to only 8 histogram features from RGB (4 from each channel)
+    features.extend(hist_red[:4])  # First 4 bins from Red
+    features.extend(hist_green[:4])  # First 4 bins from Green
+    features.extend(hist_blue[:4])  # First 4 bins from Blue
+
+    # Ensure we only keep 17 features
+    if len(features) > 17:
+        features = features[:17]  # Truncate to the first 17 features
 
     return np.array(features).reshape(1, -1)
 
-# Main app function
-def main():
-    st.title("Enhanced Image Classification App")
-    st.sidebar.title("Upload and Enhance your image")
+# Streamlit App Layout
+st.title("Enhanced Image Classification App")
+st.sidebar.title("Upload and Enhance your image")
 
-    # Sidebar for model selection
-    model_name = st.sidebar.selectbox("Select a pre-trained model", ("RandomForestRegressor",))
-    model = load_model(model_name)
+# Sidebar for model selection
+model_name = st.sidebar.selectbox("Select a pre-trained model", ("RandomForestRegressor",))
 
-    # Sidebar to upload image
-    uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+model = load_model(model_name)
 
-    # Image enhancement options
-    if uploaded_file is not None:
-        # Display the uploaded image
-        image = Image.open(uploaded_file)
-        st.image(image, caption='Uploaded Image', use_column_width=True)
+# Sidebar to upload image
+uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-        # Image enhancement sliders
-        st.sidebar.subheader("Image Enhancements")
-        brightness = st.sidebar.slider("Brightness", 0.5, 2.0, 1.0)
-        contrast = st.sidebar.slider("Contrast", 0.5, 2.0, 1.0)
+# Image enhancement options
+if uploaded_file is not None:
+    # Display the uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
 
-        # Apply enhancements
-        enhanced_image = enhance_image(image, brightness, contrast)
-        st.image(enhanced_image, caption="Enhanced Image", use_column_width=True)
+    # Image enhancement sliders
+    st.sidebar.subheader("Image Enhancements")
+    brightness = st.sidebar.slider("Brightness", 0.5, 2.0, 1.0)
+    contrast = st.sidebar.slider("Contrast", 0.5, 2.0, 1.0)
 
-        # Preprocess the image for model prediction
-        st.write("Classifying...")
-        with st.spinner("Processing..."):
-            features = extract_features(enhanced_image)
+    # Apply enhancements
+    enhancer = ImageEnhance.Brightness(image)
+    image = enhancer.enhance(brightness)
 
-            # Debug: Print the shape of the input
-            st.write(f"Input shape for prediction: {features.shape}")
+    enhancer = ImageEnhance.Contrast(image)
+    image = enhancer.enhance(contrast)
 
-            # Make prediction with Random Forest
-            try:
-                prediction = model.predict(features)
-                st.success(f"Predicted value: {prediction[0]:.2f}")  # Display the prediction
-            except ValueError as e:
-                st.error(f"Prediction error: {e}")
-                st.write("Ensure that the input shape matches the model's expected shape.")
-            except Exception as e:
-                st.error(f"An unexpected error occurred: {e}")
+    st.image(image, caption="Enhanced Image", use_column_width=True)
 
-if __name__ == "__main__":
-    main()
+    # Preprocess the image for model prediction
+    st.write("Classifying...")
+    with st.spinner("Processing..."):
+        features = extract_features(image)  # Extract features from the enhanced image
+
+        # Debug: Print the shape of the input
+        st.write(f"Input shape for prediction: {features.shape}")
+
+        # Make prediction with Random Forest
+        try:
+            prediction = model.predict(features)
+            st.write(f"Predicted value: {prediction[0]:.2f}")  # Display the prediction
+        except ValueError as e:
+            st.error(f"Prediction error: {e}")
+            st.write("Ensure that the input shape matches the model's expected shape.")
