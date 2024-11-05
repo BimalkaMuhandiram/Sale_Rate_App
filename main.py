@@ -4,7 +4,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
-from PIL import Image  # Import the Image class from PIL
+from PIL import Image
 
 # Load the pre-trained model
 @st.cache_resource
@@ -18,9 +18,10 @@ st.title("Sales Prediction App")
 
 # Sidebar for user inputs
 st.sidebar.header("User Input Features")
+
 def user_input_features():
-    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50)
-    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50) 
+    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50) 
+    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50)  
     data = {'Feature 1': feature1,
             'Feature 2': feature2}
     features = pd.DataFrame(data, index=[0])
@@ -36,27 +37,28 @@ if st.button("Predict"):
 
 # Media Upload Section
 st.header("Upload Your Media")
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"], label_visibility='collapsed')
+uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"], label_visibility='collapsed')
+uploaded_csv = st.file_uploader("Upload your CSV file...", type=["csv"], label_visibility='collapsed')
 
-if uploaded_file is not None:
+if uploaded_image is not None:
     try:
-        image = Image.open(uploaded_file)  # Open the uploaded image
+        image = Image.open(uploaded_image)  # Open the uploaded image
         st.image(image, caption='Uploaded Image', use_column_width=True)
     except Exception as e:
         st.error(f"Error: {e}")  # Show error if image cannot be opened
 
-# Data visualization section
-st.header("Data Visualization")
-try:
-    data = pd.read_csv('your_dataset.csv')  # Adjust with actual dataset path
-    st.write(data.head())
-    
-    # Example of displaying a graph
-    plt.figure(figsize=(10, 5))
-    sns.histplot(data['YourColumn'], bins=30)  # Adjust 'YourColumn' as needed
-    st.pyplot(plt)
-except FileNotFoundError:
-    st.error("Dataset file not found. Please ensure the correct file path.")
+if uploaded_csv is not None:
+    try:
+        data = pd.read_csv(uploaded_csv)  # Read the uploaded CSV file
+        st.write("Data from CSV:")
+        st.dataframe(data)  # Display the dataframe in the app
 
-# Footer
-st.write("Created by [Your Name]")
+        # Example of displaying a graph based on the CSV data
+        if 'YourColumn' in data.columns:  # Adjust this according to your CSV
+            plt.figure(figsize=(10, 5))
+            sns.histplot(data['YourColumn'], bins=30)  # Adjust 'YourColumn' as needed
+            st.pyplot(plt)
+        else:
+            st.warning("Column 'YourColumn' not found in the uploaded CSV.")
+    except Exception as e:
+        st.error(f"Error loading CSV: {e}")  # Show error if CSV cannot be read
