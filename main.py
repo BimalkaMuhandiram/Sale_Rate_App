@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 import pickle
 import re
 from PIL import Image
@@ -25,7 +26,8 @@ def load_ml_toolkit(relative_path):
 @st.cache()
 def load_data(relative_path):
     train_data = pd.read_csv(relative_path, index_col=0)
-    train_data['order_date'] = pd.to_datetime(train_data['order_date']).dt.date
+    train_data["ship_date"] = pd.to_datetime(train_data["ship_date"]).dt.date
+    train_data["order_date"] = pd.to_datetime(train_data["order_date"]).dt.date
     return train_data
 
 # Function to get date features from the inputs
@@ -50,11 +52,11 @@ def getDateFeatures(df, date):
 
 # ----- Loading the key components
 # Loading the base dataframe
-rpath = "train.csv"  # Update this to your dataset path
+rpath = "/Users/emmanythedon/Documents/train.csv"
 train_data = load_data(rpath)
 
 # Loading the toolkit
-loaded_toolkit = load_ml_toolkit("path/to/your/ml_toolkit.pkl")  # Update this to your model path
+loaded_toolkit = load_ml_toolkit("/Users/emmanythedon/Documents/PostBAP_ASSESSMENT/ML_items")
 if "results" not in st.session_state:
     st.session_state["results"] = []
 
@@ -73,7 +75,7 @@ form = st.form(key="information", clear_on_submit=True)
 # Structuring the header section
 with header:
     # Icon for the page
-    image = Image.open("path/to/your/image.jpg")  # Update this to your image path
+    image = Image.open("/Users/emmanythedon/Documents/SALES FORECASTING/sales.jpg")
     st.image(image, width=500)
 
 # Instantiating the form to receive inputs from the user
@@ -85,20 +87,20 @@ if check:
                     - **order_id**: Unique identifier for each order.
                     - **order_date**: Date when the order was placed.
                     - **ship_date**: Date when the order was shipped.
-                    - **ship_mode**: Shipping method.
+                    - **ship_mode**: The mode of shipping.
                     - **customer_id**: Unique identifier for the customer.
                     - **customer_name**: Name of the customer.
-                    - **segment**: Customer segment (e.g., consumer, corporate).
-                    - **country**: Country of the customer.
-                    - **city**: City of the customer.
-                    - **state**: State of the customer.
-                    - **postal_code**: Postal code of the customer.
-                    - **region**: Region of the customer.
+                    - **segment**: Market segment of the customer.
+                    - **country**: Country where the order was placed.
+                    - **city**: City where the order was placed.
+                    - **state**: State where the order was placed.
+                    - **postal_code**: Postal code of the delivery address.
+                    - **region**: Region where the order was placed.
                     - **product_id**: Unique identifier for the product.
-                    - **category**: Product category.
-                    - **sub-category**: Product sub-category.
+                    - **category**: Category of the product.
+                    - **sub-category**: Sub-category of the product.
                     - **product_name**: Name of the product.
-                    - **sales**: Total sales amount for the order.
+                    - **sales**: Total sales value for the order.
                     """)
 
 # Structuring the dataset section
@@ -110,16 +112,15 @@ with dataset:
     dataset.write("View sidebar for information on the columns")
 
 # Defining the list of expected variables
-expected_inputs = ["order_date", "customer_id", "customer_name", "segment", "country", "city", 
-                   "state", "postal_code", "region", "product_id", "category", "sub-category", 
-                   "product_name", "ship_mode"]
+expected_inputs = ["order_date", "ship_date", "ship_mode", "customer_id", "customer_name", 
+                   "segment", "country", "city", "state", "postal_code", "region", 
+                   "product_id", "category", "sub-category", "product_name", "sales"]
 
 # List of features to encode
-categoricals = ["customer_id", "customer_name", "segment", "country", "city", "state", 
-                "postal_code", "region", "product_id", "category", "sub-category", "product_name", "ship_mode"]
+categoricals = ["ship_mode", "customer_id", "segment", "country", "city", "state", "region", "category", "sub-category", "product_name"]
 
-# List of features to scale
-cols_to_scale = []
+# List of features to scale (if applicable)
+cols_to_scale = []  # Add columns to scale if necessary
 
 with features_and_output:
     features_and_output.subheader("Give us your Inputs")
@@ -129,21 +130,21 @@ with features_and_output:
 
     # Designing the input section of the app
     with form:
-        order_date = col1.date_input("Select an order date:", min_value=train_data["order_date"].min())
-        customer_id = col1.selectbox("Customer ID:", options=(list(train_data['customer_id'].unique())))
-        customer_name = col1.text_input("Customer Name:", value="")
-        segment = col1.selectbox("Segment:", options=(train_data['segment'].unique()))
-        country = col1.selectbox("Country:", options=(train_data['country'].unique()))
-        city = col1.selectbox("City:", options=(train_data['city'].unique()))
-        state = col1.selectbox("State:", options=(train_data['state'].unique()))
-        postal_code = col1.text_input("Postal Code:", value="")
-        region = col1.selectbox("Region:", options=(train_data['region'].unique()))
-        product_id = col2.selectbox("Product ID:", options=(train_data['product_id'].unique()))
-        category = col2.selectbox("Category:", options=(train_data['category'].unique()))
-        sub_category = col2.selectbox("Sub-category:", options=(train_data['sub-category'].unique()))
-        product_name = col2.text_input("Product Name:", value="")
-        ship_mode = col2.selectbox("Ship Mode:", options=(train_data['ship_mode'].unique()))
-
+        order_date = col1.date_input("Select order date:", min_value=train_data["order_date"].min())
+        ship_date = col1.date_input("Select ship date:", min_value=train_data["ship_date"].min())
+        ship_mode = col1.selectbox("Ship mode:", options=train_data['ship_mode'].unique())
+        customer_id = col1.selectbox("Customer ID:", options=train_data['customer_id'].unique())
+        customer_name = col1.text_input("Customer Name:", "")
+        segment = col1.selectbox("Segment:", options=train_data['segment'].unique())
+        country = col1.selectbox("Country:", options=train_data['country'].unique())
+        city = col1.selectbox("City:", options=train_data['city'].unique())
+        state = col1.selectbox("State:", options=train_data['state'].unique())
+        postal_code = col1.text_input("Postal Code:", "")
+        region = col1.selectbox("Region:", options=train_data['region'].unique())
+        product_id = col2.selectbox("Product ID:", options=train_data['product_id'].unique())
+        category = col2.selectbox("Category:", options=train_data['category'].unique())
+        sub_category = col2.selectbox("Sub-category:", options=train_data['sub-category'].unique())
+        
         # Submit button
         submitted = form.form_submit_button(label="Submit")
 
@@ -153,6 +154,8 @@ with features_and_output:
         # Inputs formatting
         input_dict = {
             "order_date": [order_date],
+            "ship_date": [ship_date],
+            "ship_mode": [ship_mode],
             "customer_id": [customer_id],
             "customer_name": [customer_name],
             "segment": [segment],
@@ -164,19 +167,15 @@ with features_and_output:
             "product_id": [product_id],
             "category": [category],
             "sub-category": [sub_category],
-            "product_name": [product_name],
-            "ship_mode": [ship_mode]
         }
 
         # Converting the input into a dataframe
         input_data = pd.DataFrame.from_dict(input_dict)
         input_df = input_data.copy()
-        
-        # Converting data types into required types
-        input_data["order_date"] = pd.to_datetime(input_data["order_date"]).dt.date
-        
+
         # Getting date features
         df_processed = getDateFeatures(input_data, "order_date")
+        df_processed = getDateFeatures(df_processed, "ship_date")
 
         # Encoding the categoricals
         encoded_categoricals = encode.transform(input_data[categoricals])
@@ -185,15 +184,17 @@ with features_and_output:
         df_processed.drop(columns=categoricals, inplace=True)
         df_processed.rename(columns=lambda x: re.sub("[^A-Za-z0-9_]+", "", x), inplace=True)
 
-        # Making the predictions        
+        # Making the predictions
         dt_pred = ml_model.predict(df_processed)
-        df_processed["sales"] = dt_pred
-        input_df["sales"] = dt_pred
-        display = dt_pred[0]
+        df_processed["predicted_sales"] = dt_pred
+
+        # Displaying prediction results
+        st.success(f"**Predicted sales**: USD {dt_pred[0]:.2f}")
 
         # Adding the predictions to previous predictions
         st.session_state["results"].append(input_df)
         result = pd.concat(st.session_state["results"])
 
-        # Displaying prediction results
-        st.success(f"**Predicted sales**: USD {display}")
+        # Expander to display previous predictions
+        previous_output = st.expander("**Review previous predictions**")
+        previous_output.data
