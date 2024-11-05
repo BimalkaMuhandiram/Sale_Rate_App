@@ -32,7 +32,7 @@ You can install these packages using pip:
 ```bash
 pip install streamlit numpy Pillow matplotlib seaborn pandas
 
-## 🚀 Running the Application
+** 🚀 Running the Application **
 
 Clone this repository to your local machine.
 
@@ -46,7 +46,7 @@ streamlit run app.py
 
 Open the URL provided in the terminal (usually http://localhost:8501) to access the app in your web browser.
 
-📝 How to Use
+** 📝 How to Use **
 
 Upload an Image using the sidebar file uploader.
 The app will process the image and extract features, displaying them visually.
