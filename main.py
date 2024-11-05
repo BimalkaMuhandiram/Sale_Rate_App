@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 import matplotlib.pyplot as plt
-import seaborn as sns
 from PIL import Image
 
 # Load the pre-trained model
@@ -20,10 +18,16 @@ st.title("Sales Prediction App")
 st.sidebar.header("User Input Features")
 
 def user_input_features():
-    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50)  # Adjust the feature ranges as needed
-    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50)  # Adjust the feature ranges as needed
-    data = {'Feature 1': feature1,
-            'Feature 2': feature2}
+    # Collecting user input based on the relevant features in the dataset
+    feature1 = st.sidebar.slider("Feature 1 (e.g., Order Quantity)", 0, 100, 50)  # Placeholder
+    feature2 = st.sidebar.slider("Feature 2 (e.g., Discount)", 0, 100, 50)      # Placeholder
+    customer_segment = st.sidebar.selectbox("Customer Segment", ["Consumer", "Corporate", "Home Office"])  # Example categorical feature
+
+    data = {
+        'Feature 1': feature1,  # Adjust the actual feature names based on your model
+        'Feature 2': feature2,  # Adjust the actual feature names based on your model
+        'customer_segment': customer_segment  # Example categorical feature
+    }
     features = pd.DataFrame(data, index=[0])
     return features
 
@@ -32,8 +36,12 @@ input_data = user_input_features()
 # Progress bar for prediction
 if st.button("Predict"):
     with st.spinner("Making prediction..."):
-        prediction = model.predict(input_data)
-        st.success(f"Prediction: {prediction[0]:.2f}")
+        try:
+            # Ensure the input matches the model's expected feature names
+            prediction = model.predict(input_data)
+            st.success(f"Prediction: {prediction[0]:.2f}")
+        except ValueError as e:
+            st.error(f"Prediction Error: {str(e)}")  # Show error if prediction fails
 
 # Media Upload Section
 st.header("Upload Your Media")
@@ -71,6 +79,3 @@ if uploaded_csv is not None:
 
     except Exception as e:
         st.error(f"Error loading CSV: {e}")  # Show error if CSV cannot be read
-
-# Footer
-st.write("Created by [Your Name]")
