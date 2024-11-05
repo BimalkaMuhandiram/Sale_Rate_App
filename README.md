@@ -16,7 +16,7 @@ This Streamlit application allows users to upload an image and extract various f
   - 📐 Correlation heatmap of the extracted features.
 - **⬇️ Downloadable CSV**: Users can download the extracted features as a CSV file.
 
-## 📋 Requirements
+## 📋 Requirements 
 
 To run this application, ensure you have the following Python packages installed:
 
@@ -32,7 +32,7 @@ You can install these packages using pip:
 ```bash
 pip install streamlit numpy Pillow matplotlib seaborn pandas
 
-🚀 Running the Application
+## 🚀 Running the Application
 
 Clone this repository to your local machine.
 
