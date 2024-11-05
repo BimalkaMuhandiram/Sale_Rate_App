@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 from PIL import Image, ImageEnhance
 import joblib
-from skimage.feature import greycomatrix, greycoprops
 
 # Load the pre-trained model based on user selection
 @st.cache_resource
@@ -59,8 +58,7 @@ if uploaded_file is not None:
         std_rgb = img_array.std(axis=(0, 1))  # Std for R, G, B
         features.extend(std_rgb)
 
-        # 3. Add other features as necessary to reach 17 features
-        # For instance, histograms or other statistics:
+        # 3. Histogram of RGB channels
         hist_red, _ = np.histogram(img_array[:, :, 0], bins=8, range=(0, 1))
         hist_green, _ = np.histogram(img_array[:, :, 1], bins=8, range=(0, 1))
         hist_blue, _ = np.histogram(img_array[:, :, 2], bins=8, range=(0, 1))
