@@ -9,7 +9,7 @@ from PIL import Image
 # Load the pre-trained model
 @st.cache_resource
 def load_model():
-    return joblib.load("random_forest_regressor_model.pkl")
+    return joblib.load("model.pkl")
 
 model = load_model()
 
@@ -20,8 +20,8 @@ st.title("Sales Prediction App")
 st.sidebar.header("User Input Features")
 
 def user_input_features():
-    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50) 
-    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50)  
+    feature1 = st.sidebar.slider("Feature 1", 0, 100, 50)  # Adjust the feature ranges as needed
+    feature2 = st.sidebar.slider("Feature 2", 0, 100, 50)  # Adjust the feature ranges as needed
     data = {'Feature 1': feature1,
             'Feature 2': feature2}
     features = pd.DataFrame(data, index=[0])
@@ -53,12 +53,24 @@ if uploaded_csv is not None:
         st.write("Data from CSV:")
         st.dataframe(data)  # Display the dataframe in the app
 
-        # Example of displaying a graph based on the CSV data
-        if 'YourColumn' in data.columns:  # Adjust this according to your CSV
-            plt.figure(figsize=(10, 5))
-            sns.histplot(data['YourColumn'], bins=30)  # Adjust 'YourColumn' as needed
-            st.pyplot(plt)
-        else:
-            st.warning("Column 'YourColumn' not found in the uploaded CSV.")
+        # Display basic statistics about the data
+        st.write("Basic Statistics:")
+        st.write(data.describe())
+
+        # Example: Display sales by category
+        st.subheader("Sales by Category")
+        sales_by_category = data.groupby('category')['sales'].sum().reset_index()
+        st.bar_chart(sales_by_category.set_index('category'))
+
+        # Example: Display sales over time
+        st.subheader("Sales Over Time")
+        data['order_date'] = pd.to_datetime(data['order_date'])  # Ensure the date column is in datetime format
+        sales_over_time = data.groupby(data['order_date'].dt.to_period('M'))['sales'].sum().reset_index()
+        sales_over_time['order_date'] = sales_over_time['order_date'].dt.to_timestamp()  # Convert back to timestamp for plotting
+        st.line_chart(sales_over_time.set_index('order_date')['sales'])
+
     except Exception as e:
         st.error(f"Error loading CSV: {e}")  # Show error if CSV cannot be read
+
+# Footer
+st.write("Created by [Your Name]")
