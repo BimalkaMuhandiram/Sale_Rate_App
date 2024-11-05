@@ -1,110 +1,84 @@
 import streamlit as st
-import tensorflow as tf
-from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
-from tensorflow.keras.preprocessing import image
-from PIL import Image
+import pandas as pd
 import numpy as np
-import time
+import joblib
+from sklearn.ensemble import RandomForestRegressor
 import matplotlib.pyplot as plt
+import time
 
-# Set up the main title and a brief description
-st.title("Machine Learning Application 🎉")
-st.write(
-    """
-    Welcome! This app lets you upload an image, audio, or video file and get insights from an image classifier.
-    You can adjust the confidence threshold, and we'll show you the top predictions with a confidence chart.
-    """
-)
-
-# Load and cache the pre-trained model to prevent reloading
+# Load the pre-trained Random Forest model
 @st.cache_resource
 def load_model():
-    return MobileNetV2(weights='imagenet')
+    # Make sure to have your model saved as 'model.pkl' in the same directory
+    return joblib.load("model.pkl")
 
 model = load_model()
 
-# Sidebar for file uploads and user inputs
-st.sidebar.header("Upload Your Files Here 📂")
-uploaded_image = st.sidebar.file_uploader("Upload an Image (JPG, JPEG, PNG)", type=["jpg", "jpeg", "png"])
-uploaded_audio = st.sidebar.file_uploader("Upload an Audio File (MP3, WAV)", type=["mp3", "wav"])
-uploaded_video = st.sidebar.file_uploader("Upload a Video File (MP4, MOV)", type=["mp4", "mov"])
+# Set up the main title and a brief description
+st.title("Random Forest Regression Application 📊")
+st.write(
+    """
+    Welcome to the Random Forest Regression app! This app allows you to upload a CSV file of data and make predictions using a trained Random Forest model.
+    You can input parameters manually or upload a dataset to predict outcomes.
+    """
+)
 
-# Sidebar for additional settings
-st.sidebar.header("Settings ⚙️")
-user_name = st.sidebar.text_input("Your Name", placeholder="Enter your name")
-threshold = st.sidebar.slider("Confidence Threshold", 0.0, 1.0, 0.2)
+# Sidebar for file uploads
+st.sidebar.header("Upload Your Data 📂")
+uploaded_file = st.sidebar.file_uploader("Upload a CSV file for predictions", type="csv")
 
-# Display status updates in the sidebar
-status_display = st.sidebar.empty()
+# User inputs for manual prediction
+st.sidebar.header("Input Parameters for Prediction ⚙️")
+input_params = {}
 
-# Image Prediction Function
-def predict_image(img, model):
-    img = img.resize((224, 224))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)
-    
-    status_display.text("Analyzing the image... 📊")
-    preds = model.predict(img_array)
-    return decode_predictions(preds, top=3)[0]
+# Assuming the model requires the following features, customize according to your model's input features
+input_params['feature1'] = st.sidebar.number_input("Feature 1", min_value=0.0)
+input_params['feature2'] = st.sidebar.number_input("Feature 2", min_value=0.0)
+input_params['feature3'] = st.sidebar.number_input("Feature 3", min_value=0.0)
+input_params['feature4'] = st.sidebar.number_input("Feature 4", min_value=0.0)
 
-# Main content: Image upload and prediction section
-st.header("1. Image Classification 🖼️")
+# Button for manual prediction
+if st.sidebar.button("Predict"):
+    input_data = np.array([[input_params['feature1'], input_params['feature2'], input_params['feature3'], input_params['feature4']]])
+    prediction = model.predict(input_data)
 
-if uploaded_image is not None:
-    # Display the uploaded image
-    st.image(uploaded_image, caption="Your Uploaded Image", use_column_width=True)
-    img = Image.open(uploaded_image)
+    # Display the prediction
+    st.subheader("Predicted Output 🔮")
+    st.write(f"The predicted value is: **{prediction[0]:.2f}**")
 
-    # Button for predicting image
-    if st.button("Classify Image"):
-        progress_bar = st.progress(0)
-        
-        # Simulate loading time for user experience
-        for percent in range(10):
-            progress_bar.progress((percent + 1) * 10)
-            time.sleep(0.1)
+# Display uploaded file results
+if uploaded_file is not None:
+    st.header("Uploaded Data Preview 📈")
+    data = pd.read_csv(uploaded_file)
+    st.write(data.head())
 
-        # Predict and filter results
-        predictions = predict_image(img, model)
-        filtered_preds = [(label, score) for (_, label, score) in predictions if score >= threshold]
-
-        # Display predictions
-        st.subheader("Top Predictions 🎯")
-        if filtered_preds:
-            for label, score in filtered_preds:
-                st.write(f"- **{label.capitalize()}**: {score*100:.2f}% confidence")
+    # Button to make predictions on the uploaded data
+    if st.button("Predict on Uploaded Data"):
+        if data.shape[1] < 5:
+            st.error("Uploaded data must have at least 4 features for prediction.")
         else:
-            st.write("No predictions met the confidence threshold.")
-        
-        # Update status and remove progress bar
-        progress_bar.empty()
-        status_display.text("Prediction Complete! ✅")
+            # Ensure only the required features are selected for predictions
+            features = data.iloc[:, :4]  # Adjust according to your model's input features
+            predictions = model.predict(features)
 
-        # Show confidence chart
-        st.subheader("Prediction Confidence Chart 📊")
-        labels, scores = zip(*[(label, score * 100) for label, score in filtered_preds])
-        fig, ax = plt.subplots()
-        ax.barh(labels, scores, color='skyblue')
-        ax.set_xlabel("Confidence (%)")
-        ax.set_title("Confidence Levels of Top Predictions")
-        st.pyplot(fig)
+            # Display predictions
+            data['Predicted Value'] = predictions
+            st.subheader("Predictions for Uploaded Data 📊")
+            st.write(data)
+
+            # Visualize predictions
+            fig, ax = plt.subplots()
+            ax.scatter(data.index, data.iloc[:, -1], label='Actual Values', color='blue')
+            ax.scatter(data.index, predictions, label='Predicted Values', color='red')
+            ax.set_title("Actual vs Predicted Values")
+            ax.set_xlabel("Index")
+            ax.set_ylabel("Values")
+            ax.legend()
+            st.pyplot(fig)
 
 else:
-    st.info("Upload an image to begin classification.")
-
-# Audio file section
-st.header("2. Audio Player 🎵")
-if uploaded_audio is not None:
-    st.audio(uploaded_audio, format="audio/mp3")
-    st.write("Enjoy your uploaded audio file above! 🎧")
-
-# Video file section
-st.header("3. Video Player 🎥")
-if uploaded_video is not None:
-    st.video(uploaded_video)
-    st.write("Here's your uploaded video file! 🎬")
+    st.info("Upload a CSV file to make predictions.")
 
 # Closing message
 st.write("---")
-st.write("Thank you for using this app! We hope you had fun exploring different media and predictions. 😊")
+st.write("Thank you for using this app! We hope you found it useful for making predictions. 😊")
