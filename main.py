@@ -13,31 +13,28 @@ from datetime import datetime
 # Function to load the dataset
 @st.cache_data
 def load_data():
-    data = pd.read_csv("train.csv") 
-    return data
+    return pd.read_csv("train.csv") 
 
 # Load data
 data = load_data()
 
+# Home Page
 def home_page():
     st.title("Sales Prediction App")
     
     # Upload image option
     uploaded_image = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
-    
     if uploaded_image is not None:
         st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
-    else:
-        st.write("No image uploaded. Please upload an image to see it displayed here.")
 
     st.write("""
     Welcome to the Sales Prediction App! Here, you can predict sales based on various features.
     Use the sidebar to navigate through the different pages and predict sales using our machine learning model.
     """)
 
-    # Display basic data overview
+    # Dataset Overview
     st.subheader('Dataset Overview')
-    st.write(data.head())
+    st.dataframe(data.head())
     st.write("Summary of dataset:")
     st.write(data.describe())
 
@@ -49,34 +46,32 @@ def home_page():
     ax.set_xlabel('Sales')
     st.pyplot(fig)
 
-    # Gender Distribution (if applicable, based on dataset)
+    # Customer Segment Distribution
     if 'Segment' in data.columns:
         segment_counts = data['Segment'].value_counts().reset_index()
         segment_counts.columns = ['Segment', 'Count']
         fig = px.pie(segment_counts, values='Count', names='Segment', title='Customer Segment Distribution')
         st.plotly_chart(fig)
 
-# Define the model training page
+# Model Training Page
 def model_page():
     st.title("Sales Prediction Model")
     
     # Sidebar for user inputs
     st.sidebar.header("Model Hyperparameters")
+    n_estimators = st.sidebar.slider("Number of Estimators", 10, 200, 100)
+    max_depth = st.sidebar.slider("Maximum Depth", 1, 20, 10)
+    random_state = st.sidebar.number_input("Random State", value=42)
 
-    # Input widgets for model parameters
-    n_estimators = st.sidebar.slider("Number of Estimators", 10, 200, 100, help="The number of trees in the forest.")
-    max_depth = st.sidebar.slider("Maximum Depth", 1, 20, 10, help="The maximum depth of the trees.")
-    random_state = st.sidebar.number_input("Random State", value=42, help="Random seed for reproducibility.")
-
-    # Preprocessing
+    # Preprocessing the Data
     st.subheader("Preprocessing the Data")
-    X = data.drop('Sales', axis=1)  # Features
+    X = data.drop('Sales', axis=1, errors='ignore')  # Features
     y = data['Sales']  # Target
 
     # Display feature and target summaries
     with st.expander("Feature Summary"):
         st.write(X.describe())
-
+        
     with st.expander("Target Summary"):
         st.write(y.describe())
 
@@ -89,22 +84,26 @@ def model_page():
 
     if train_button:
         with st.spinner('Training in progress...'):
-            model = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=random_state)
-            model.fit(X_train, y_train)
+            try:
+                model = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=random_state)
+                model.fit(X_train, y_train)
 
-            # Predict on the test set
-            y_pred = model.predict(X_test)
-            mse = mean_squared_error(y_test, y_pred)
-            rmse = np.sqrt(mse)
+                # Predict on the test set
+                y_pred = model.predict(X_test)
+                mse = mean_squared_error(y_test, y_pred)
+                rmse = np.sqrt(mse)
 
-            st.success(f"Model Trained! RMSE: *{rmse:.2f}*")
+                st.success(f"Model Trained! RMSE: *{rmse:.2f}*")
 
-            # Visualize predictions vs actual values
-            st.subheader("Predictions vs Actual")
-            comparison_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
-            st.line_chart(comparison_df)
+                # Visualize predictions vs actual values
+                st.subheader("Predictions vs Actual")
+                comparison_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
+                st.line_chart(comparison_df)
 
-# Define the prediction page
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+
+# Prediction Page
 def prediction_page():
     st.title("Sales Prediction")
 
@@ -113,32 +112,28 @@ def prediction_page():
     def sales_prediction(input_data):
         input_data_as_numpy_array = np.asarray(input_data)
         input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
-        prediction = loaded_model.predict(input_data_reshaped)
-        return f"Predicted Sales: ${prediction[0]:.2f}"
+        return loaded_model.predict(input_data_reshaped)
 
-    def main():
-        st.markdown("### Enter your details")
-        # User inputs based on your dataset
-        order_quantity = st.text_input('Order Quantity')
-        discount = st.text_input('Discount (%)')
-        category = st.selectbox('Product Category', ['Furniture', 'Office Supplies', 'Technology'])  # Add more categories as needed
-        city = st.text_input('City')
-        customer_id = st.text_input('Customer ID')
-        customer_name = st.text_input('Customer Name')
-        order_date = st.date_input("Order Date", value=datetime.today())
+    st.markdown("### Enter your details for sales prediction")
+    order_quantity = st.number_input('Order Quantity', min_value=0, help='Enter the quantity of the order')
+    discount = st.number_input('Discount (%)', min_value=0.0, max_value=100.0, step=0.1, help='Enter the discount percentage')
+    category = st.selectbox('Product Category', ['Furniture', 'Office Supplies', 'Technology'])
+    city = st.text_input('City', help='Enter the city name')
+    customer_id = st.text_input('Customer ID', help='Enter the customer ID')
+    customer_name = st.text_input('Customer Name', help='Enter the customer name')
+    order_date = st.date_input("Order Date", value=datetime.today())
 
-        if st.button('Click to Predict Sales'):
-            with st.spinner('Calculating...'):
-                prediction = sales_prediction([order_quantity, discount, category, city, customer_id, customer_name])
-                st.success(prediction)
-
-    main()
+    if st.button('Click to Predict Sales'):
+        with st.spinner('Calculating...'):
+            input_data = [order_quantity, discount, category, city, customer_id, customer_name]
+            prediction = sales_prediction(input_data)
+            st.success(f"Predicted Sales: ${prediction[0]:.2f}")
 
 # Sidebar Navigation
 st.sidebar.title("Navigation")
 page_selection = st.sidebar.radio("Go to", ["Home", "Sales Prediction Model", "Prediction"])
 
-# Sidebar - Link to the different pages
+# Page Navigation Logic
 if page_selection == "Home":
     home_page()
 elif page_selection == "Sales Prediction Model":
