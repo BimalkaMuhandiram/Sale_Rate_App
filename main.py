@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
+from sklearn.preprocessing import OneHotEncoder
+import numpy as np
 from PIL import Image
 
 # Load the pre-trained model
@@ -19,16 +20,26 @@ st.sidebar.header("User Input Features")
 
 def user_input_features():
     # Collecting user input based on the relevant features in the dataset
-    feature1 = st.sidebar.slider("Feature 1 (e.g., Order Quantity)", 0, 100, 50)  # Placeholder
-    feature2 = st.sidebar.slider("Feature 2 (e.g., Discount)", 0, 100, 50)      # Placeholder
-    customer_segment = st.sidebar.selectbox("Customer Segment", ["Consumer", "Corporate", "Home Office"])  # Example categorical feature
+    order_quantity = st.sidebar.slider("Order Quantity", 0, 100, 50)  # Placeholder for a numerical feature
+    discount = st.sidebar.slider("Discount (%)", 0, 100, 10)  # Placeholder for discount
+    customer_id = st.sidebar.text_input("Customer ID", "CUST_001")  # Example input for customer ID
+    customer_name = st.sidebar.text_input("Customer Name", "John Doe")  # Example input for customer name
+    category = st.sidebar.selectbox("Product Category", ["Furniture", "Office Supplies", "Technology"])  # Example categorical feature
+    city = st.sidebar.text_input("City", "New York")  # Example input for city
+    order_date = st.sidebar.date_input("Order Date")  # Example input for order date
 
+    # Create a DataFrame with user inputs
     data = {
-        'Feature 1': feature1,  # Adjust the actual feature names based on your model
-        'Feature 2': feature2,  # Adjust the actual feature names based on your model
-        'customer_segment': customer_segment  # Example categorical feature
+        'order_quantity': order_quantity,
+        'discount': discount,
+        'customer_id': customer_id,
+        'customer_name': customer_name,
+        'category': category,
+        'city': city,
+        'order_date': order_date
     }
     features = pd.DataFrame(data, index=[0])
+
     return features
 
 input_data = user_input_features()
@@ -37,16 +48,28 @@ input_data = user_input_features()
 if st.button("Predict"):
     with st.spinner("Making prediction..."):
         try:
-            # Ensure the input matches the model's expected feature names
-            prediction = model.predict(input_data)
+            # If your model requires one-hot encoding for categorical variables
+            categorical_features = ['customer_id', 'customer_name', 'category', 'city']
+            numerical_features = ['order_quantity', 'discount']
+
+            # Encoding categorical features
+            encoder = OneHotEncoder(handle_unknown='ignore')
+            encoded_categorical = encoder.fit_transform(input_data[categorical_features]).toarray()
+            encoded_df = pd.DataFrame(encoded_categorical, columns=encoder.get_feature_names_out(categorical_features))
+            
+            # Combine encoded categorical features with numerical features
+            final_input = pd.concat([input_data[numerical_features], encoded_df], axis=1)
+
+            # Make prediction
+            prediction = model.predict(final_input)
             st.success(f"Prediction: {prediction[0]:.2f}")
         except ValueError as e:
             st.error(f"Prediction Error: {str(e)}")  # Show error if prediction fails
 
 # Media Upload Section
 st.header("Upload Your Media")
-uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"], label_visibility='collapsed')
-uploaded_csv = st.file_uploader("Upload your CSV file...", type=["csv"], label_visibility='collapsed')
+uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+uploaded_csv = st.file_uploader("Upload your CSV file...", type=["csv"])
 
 if uploaded_image is not None:
     try:
