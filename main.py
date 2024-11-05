@@ -23,11 +23,18 @@ def user_input_features():
     feature1 = st.sidebar.slider("Feature 1 (e.g., Order Quantity)", 0, 100, 50)  # Adjust range as needed
     feature2 = st.sidebar.slider("Feature 2 (e.g., Discount %)", 0, 100, 10)  # Adjust range as needed
     category = st.sidebar.selectbox("Product Category", ["Furniture", "Office Supplies", "Technology"])  # Example categories
+    
+    # Prepare the input data
     data = {'Feature 1': feature1,
             'Feature 2': feature2,
             'Category': category}
+    
+    # Create a DataFrame
     features = pd.DataFrame(data, index=[0])
-    return features
+    
+    # One-hot encode the 'Category' feature
+    features_encoded = pd.get_dummies(features, columns=['Category'], drop_first=True)  # Drop first to avoid dummy variable trap
+    return features_encoded
 
 input_data = user_input_features()
 
@@ -35,8 +42,11 @@ input_data = user_input_features()
 st.subheader("Sales Prediction")
 if st.button("Predict"):
     with st.spinner("Making prediction..."):
-        prediction = model.predict(input_data)
-        st.success(f"Predicted Sales: ${prediction[0]:,.2f}")
+        try:
+            prediction = model.predict(input_data)  # Use the encoded input_data
+            st.success(f"Predicted Sales: ${prediction[0]:,.2f}")
+        except Exception as e:
+            st.error(f"Error making prediction: {e}")
 
 # Media Upload Section
 st.header("Upload Your Media")
