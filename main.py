@@ -19,17 +19,21 @@ def load_data():
 # Load data
 data = load_data()
 
-# Define the home page
 def home_page():
     st.title("Sales Prediction App")
     
-    # Upload media (example images)
-    st.image("sales_image.jpg")  # Replace with your image path
-    st.video("sales_video.mp4")  # Replace with your video path
+    # Upload image option
+    uploaded_image = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
     
+    if uploaded_image is not None:
+        st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
+    else:
+        # Ensure the file path is correct for the placeholder image
+        st.image("sales_image.jpg", caption="Placeholder Image")  # Ensure this file path is correct
+
     st.write("""
-    Welcome to the Sales Prediction App! Here, you can predict sales based on input features from your dataset.
-    Use the sidebar to navigate through the different pages and to train the model or make predictions.
+    Welcome to the Sales Prediction App! Here, you can predict sales based on various features.
+    Use the sidebar to navigate through the different pages and predict sales using our machine learning model.
     """)
 
     # Display basic data overview
